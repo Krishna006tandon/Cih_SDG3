@@ -11,9 +11,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  build: {
-    outDir: '../public',
-  },
+
   server: {
     proxy: {
       '/api': {

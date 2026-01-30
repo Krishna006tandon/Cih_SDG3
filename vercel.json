@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "buildCommand": "cd Frontend && npm install && npm run build",
-  "outputDirectory": "public",
-
   "builds": [
     {
       "src": "Frontend/package.json",
@@ -34,7 +31,7 @@
     },
     {
       "source": "/(.*)",
-      "destination": "/public/index.html"
+      "destination": "/Frontend/dist/index.html"
     }
   ]
 }
