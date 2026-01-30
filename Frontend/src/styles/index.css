@@ -86,6 +86,38 @@
   50% { transform: scale(1.2); box-shadow: 0 0 30px var(--pulse-color), 0 0 60px var(--pulse-color); }
 }
 
+/* Chatbot Specific Animations */
+@keyframes chat-pop-in {
+  0% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes chat-pop-out {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+}
+
+@keyframes chat-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 /* Animation Classes */
 .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
 .animate-slide-up { animation: slide-up 0.6s ease-out forwards; }
@@ -99,6 +131,9 @@
 .animate-slide-in-right { animation: slide-in-right 0.5s ease-out forwards; }
 .animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
 .animate-pulse-core { animation: pulse-core 2s ease-in-out infinite; }
+.animate-chat-pop-in { animation: chat-pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.animate-chat-pop-out { animation: chat-pop-out 0.2s ease forwards; }
+.animate-chat-float { animation: chat-float 3s ease-in-out infinite; }
 
 /* Staggered Animations */
 .animate-stagger-1 { animation-delay: 0.1s; }

@@ -7,6 +7,7 @@ import NodeCache from "node-cache";
 import { cityDataRouter } from "./routes/cityData.js";
 import { heatmapRouter } from "./routes/heatmap.js";
 import { healthRiskRouter } from "./routes/healthRisk.js";
+import { geminiRouter } from "./routes/gemini.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
@@ -32,6 +33,7 @@ app.use((req, res, next) => {
 app.use("/api/city", cityDataRouter);
 app.use("/api/heatmap", heatmapRouter);
 app.use("/api/health-risk", healthRiskRouter);
+app.use("/api/gemini", geminiRouter);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
@@ -79,6 +81,12 @@ app.get("/api", (req, res) => {
         path: "/api/health-risk/summary",
         method: "GET",
         description: "Get health risk summary for all cities"
+      },
+      gemini: {
+        path: "/api/gemini/chat",
+        method: "POST",
+        body: { message: "string", history: "array of {role, content}" },
+        description: "Chat with the Gemini AI assistant about air quality and health data"
       }
     },
     sdgAlignment: "SDG-3: Good Health and Well-Being",
