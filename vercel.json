@@ -2,12 +2,14 @@
   "version": 2,
   "builds": [
     {
-      "src": "Frontend/package.json",
+      "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "Frontend/dist"
+        "distDir": "Frontend/dist",
+        "buildCommand": "npm run vercel-build"
       }
     }
   ],
-  "outputDirectory": "Frontend/dist"
+  "outputDirectory": "Frontend/dist",
+  "installCommand": "npm install"
 }
