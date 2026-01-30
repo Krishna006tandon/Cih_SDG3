@@ -302,6 +302,8 @@ router.post("/", async (req, res) => {
         state = "Gujarat";
       } else if (cityKey === "Jaipur") {
         state = "Rajasthan";
+      } else if (cityKey === "Amritsar") {
+        state = "Punjab";
       }
       
       const airVisualData = await airVisualClient.getCityData(cityKey, state);

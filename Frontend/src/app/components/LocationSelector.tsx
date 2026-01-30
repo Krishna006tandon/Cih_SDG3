@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MapPin, ArrowRight, ChevronDown } from "lucide-react";
-import { states } from "@/data/indiaData";
+import { states } from "../../data/indiaData";
 
 interface LocationSelectorProps {
   onLocationSelect: (state: string, city: string) => void;
