@@ -1,95 +1,227 @@
-import { ArrowLeft, MapPin, Calendar } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { SummaryCards } from "./SummaryCards";
+import { DiseaseCards } from "./DiseaseCards";
 import { ChartsBlock } from "./ChartsBlock";
 import { IndiaHeatMap } from "./IndiaHeatMap";
-import { DiseaseCards } from "./DiseaseCards";
-import { PreventionTips } from "./PreventionTips";
-import { getCityData, generateTrendData } from "@/data/indiaData";
+import { AdvisoryBlock } from "./AdvisoryBlock";
+import { AQIDisplay } from "./AQIDisplay";
+import { PollutantCards } from "./PollutantCards";
+import { HealthRecommendations } from "./HealthRecommendations";
+
+const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+interface DetailedDisease {
+  name: string;
+  icon: string;
+  threshold: number;
+  risk: string;
+}
+
+interface HealthRecommendation {
+  airPurifier: string;
+  carFilter: string;
+  mask: string;
+  stayIndoor: string;
+}
+
+interface DashboardData {
+  city: string;
+  pm25: number;
+  pm10: number;
+  o3: number | null;
+  no2: number | null;
+  so2: number | null;
+  co: number | null;
+  aqi: number | null;
+  aqiCategory: string;
+  aqiColor: string;
+  risk: string;
+  diseases: string[];
+  detailedDiseases: DetailedDisease[];
+  healthRecommendations: HealthRecommendation;
+  coordinates: { lat: number; lng: number };
+  chartData: { time: string; pm25: number; pm10: number }[];
+  advisory: string;
+  disclaimer: string;
+  lastUpdated: string;
+}
+
+interface HeatMapData {
+  points: {
+    city: string;
+    lat: number;
+    lng: number;
+    pm25: number;
+    risk: string;
+    color: string;
+  }[];
+}
 
 interface DashboardProps {
-  city: string;
   state: string;
+  city: string;
   onBack: () => void;
 }
 
-export function Dashboard({ city, state, onBack }: DashboardProps) {
-  const cityData = getCityData(city);
+export function Dashboard({ state, city, onBack }: DashboardProps) {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [heatmapData, setHeatmapData] = useState<HeatMapData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!cityData) {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchData() {
+      setLoading(true);
+      setError(null);
+      try {
+        const cityRes = await fetch(`${API_BASE}/city`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ city }),
+        });
+
+        if (cancelled) return;
+
+        if (!cityRes.ok) {
+          const err = await cityRes.json().catch(() => ({}));
+          setError(err.error || "City not supported.");
+          return;
+        }
+
+        const cityData = await cityRes.json();
+        setData(cityData);
+
+        let heatmap: HeatMapData | null = null;
+        try {
+          const heatmapRes = await fetch(`${API_BASE}/heatmap`);
+          if (heatmapRes.ok) heatmap = await heatmapRes.json();
+        } catch (_) {}
+
+        if (cancelled) return;
+        setHeatmapData(heatmap);
+      } catch {
+        if (!cancelled) setError("Temporary service issue. Ensure backend is running on port 5000.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
+  }, [city]);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-[#EBF4F6] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-gray-600">City data not found</p>
+        <div className="text-center animate-fade-in">
+          <Loader2 className="h-16 w-16 text-[#088395] animate-spin mx-auto mb-4" />
+          <p className="text-[#09637E] font-medium">Loading health dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="min-h-screen bg-[#EBF4F6] flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md text-center animate-scale-in">
+          <p className="text-red-600 font-medium mb-4">{error || "Something went wrong."}</p>
           <button
             onClick={onBack}
-            className="mt-4 text-[#088395] hover:underline"
+            className="inline-flex items-center gap-2 bg-[#09637E] text-white px-6 py-3 rounded-xl hover:bg-[#088395] transition-colors"
           >
-            Go back
+            <ArrowLeft className="h-5 w-5" />
+            Back to Location
           </button>
         </div>
       </div>
     );
   }
 
-  const trendData = generateTrendData(cityData.pm25);
-
   return (
-    <div className="min-h-screen bg-[#EBF4F6]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-[#EBF4F6] pb-20">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-[#7AB2B2]/20 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-[#088395]/15 rounded-full blur-3xl" />
+      </div>
+
+      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-[#7AB2B2]/30">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
             onClick={onBack}
-            className="inline-flex items-center gap-2 text-[#088395] hover:text-[#09637E] mb-4 transition-colors"
+            className="flex items-center gap-2 text-[#09637E] hover:text-[#088395] transition-colors font-medium"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-5 w-5" />
             Change Location
           </button>
+          <h1 className="text-xl font-bold text-[#09637E]">{data.city} Health Dashboard</h1>
+          <span className="text-sm text-[#088395] font-medium">SDG-3</span>
+        </div>
+      </header>
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="bg-[#7AB2B2] bg-opacity-20 p-3 rounded-lg">
-                  <MapPin className="h-6 w-6 text-[#088395]" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-[#09637E]">{city}, {state}</h1>
-                  <p className="text-sm text-gray-600">Real-time Air Quality & Health Data</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar className="h-4 w-4" />
-                <span>Updated: January 30, 2026</span>
-              </div>
-            </div>
-          </div>
+      <main className="max-w-6xl mx-auto px-4 py-8 relative z-10 space-y-8">
+        {/* AQI Display with gauge */}
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]">
+          <AQIDisplay
+            aqi={data.aqi}
+            aqiCategory={data.aqiCategory}
+            aqiColor={data.aqiColor}
+            city={data.city}
+          />
         </div>
 
-        {/* Summary Cards */}
-        <div className="mb-8">
-          <SummaryCards pm25={cityData.pm25} pm10={cityData.pm10} />
+        {/* All Pollutants */}
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.1s" }}>
+          <PollutantCards
+            pm25={data.pm25}
+            pm10={data.pm10}
+            o3={data.o3}
+            no2={data.no2}
+            so2={data.so2}
+            co={data.co}
+            city={data.city}
+          />
         </div>
 
-        {/* Charts */}
-        <div className="mb-8">
-          <ChartsBlock trendData={trendData} />
+        {/* Health Recommendations */}
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.15s" }}>
+          <HealthRecommendations
+            aqi={data.aqi}
+            aqiCategory={data.aqiCategory}
+            recommendations={data.healthRecommendations}
+          />
         </div>
 
-        {/* Heat Map */}
-        <div className="mb-8">
-          <IndiaHeatMap />
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.2s" }}>
+          <SummaryCards
+            pm25={data.pm25}
+            pm10={data.pm10}
+            risk={data.risk}
+            city={data.city}
+          />
         </div>
-
-        {/* Disease Cards */}
-        <div className="mb-8">
-          <DiseaseCards />
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.25s" }}>
+          <DiseaseCards diseases={data.diseases} risk={data.risk} detailedDiseases={data.detailedDiseases} />
         </div>
-
-        {/* Prevention Tips */}
-        <div className="mb-8">
-          <PreventionTips />
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.3s" }}>
+          <ChartsBlock chartData={data.chartData} />
         </div>
-      </div>
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.35s" }}>
+          <IndiaHeatMap
+            points={heatmapData?.points ?? [{ city: data.city, lat: data.coordinates.lat, lng: data.coordinates.lng, pm25: data.pm25, risk: data.risk, color: data.risk === "High" ? "#ef4444" : data.risk === "Medium" ? "#eab308" : "#22c55e" }]}
+            selectedCity={data.city}
+            selectedCoords={data.coordinates}
+          />
+        </div>
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.4s" }}>
+          <AdvisoryBlock advisory={data.advisory} disclaimer={data.disclaimer} />
+        </div>
+      </main>
     </div>
   );
 }

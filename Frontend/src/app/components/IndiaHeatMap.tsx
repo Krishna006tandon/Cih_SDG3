@@ -1,110 +1,120 @@
-import { useState } from "react";
 import { MapPin } from "lucide-react";
-import { citiesData, getHealthRisk } from "@/data/indiaData";
+import { useMemo } from "react";
 
-export function IndiaHeatMap() {
-  const [hoveredCity, setHoveredCity] = useState<string | null>(null);
+interface HeatMapPoint {
+  city: string;
+  lat: number;
+  lng: number;
+  pm25: number;
+  risk: string;
+  color: string;
+}
 
-  // Simplified India map representation using relative positioning
-  const getCityPosition = (lat: number, lng: number) => {
-    // Normalize coordinates to fit within container (simplified projection)
-    // India bounds: lat ~8-35, lng ~68-97
-    const x = ((lng - 68) / (97 - 68)) * 100;
-    const y = ((35 - lat) / (35 - 8)) * 100;
-    return { x, y };
-  };
+interface IndiaHeatMapProps {
+  points: HeatMapPoint[];
+  selectedCity?: string;
+  selectedCoords?: { lat: number; lng: number };
+}
+
+// India bounding box - equirectangular projection
+const INDIA = {
+  minLat: 8,
+  maxLat: 35,
+  minLng: 68,
+  maxLng: 97,
+  width: 400,
+  height: 480,
+};
+
+function projectToSvg(lat: number, lng: number) {
+  const x = ((lng - INDIA.minLng) / (INDIA.maxLng - INDIA.minLng)) * INDIA.width * 0.88 + INDIA.width * 0.06;
+  const y = INDIA.height - ((lat - INDIA.minLat) / (INDIA.maxLat - INDIA.minLat)) * INDIA.height * 0.88 - INDIA.height * 0.06;
+  return { x, y };
+}
+
+export function IndiaHeatMap({
+  points,
+  selectedCity,
+  selectedCoords,
+}: IndiaHeatMapProps) {
+  const projectedPoints = useMemo(() => {
+    return points.map((p) => ({
+      ...p,
+      ...projectToSvg(p.lat, p.lng),
+      isSelected:
+        selectedCity === p.city ||
+        (selectedCoords &&
+          Math.abs(selectedCoords.lat - p.lat) < 0.5 &&
+          Math.abs(selectedCoords.lng - p.lng) < 0.5),
+    }));
+  }, [points, selectedCity, selectedCoords]);
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <div className="mb-4">
-        <h3 className="font-semibold text-[#09637E] mb-2">India Air Quality Heat Map</h3>
-        <p className="text-sm text-gray-600">Hover over cities to view detailed pollution data</p>
+    <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-lg border border-[#7AB2B2]/30 hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+      <div className="flex items-center gap-2 mb-4">
+        <MapPin className="h-5 w-5 text-[#09637E]" />
+        <h3 className="text-lg font-semibold text-[#09637E]">India Air Quality Map</h3>
       </div>
-
-      {/* Legend */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span className="text-xs text-gray-700">Good (0-50)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-          <span className="text-xs text-gray-700">Moderate (51-100)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-          <span className="text-xs text-gray-700">Unhealthy (101-150)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <span className="text-xs text-gray-700">Very Unhealthy (151+)</span>
-        </div>
-      </div>
-
-      {/* Map Container */}
-      <div className="relative w-full h-[500px] bg-gradient-to-br from-[#EBF4F6] to-white rounded-xl border-2 border-gray-200 overflow-hidden">
-        {/* India outline background */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <MapPin className="h-32 w-32 text-gray-200" />
-        </div>
-
-        {/* City markers */}
-        {citiesData.map((city) => {
-          const pos = getCityPosition(city.lat, city.lng);
-          const risk = getHealthRisk(city.pm25);
-          const isHovered = hoveredCity === city.name;
-
-          return (
-            <div
-              key={city.name}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all duration-200"
-              style={{
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
-                zIndex: isHovered ? 50 : 10
-              }}
-              onMouseEnter={() => setHoveredCity(city.name)}
-              onMouseLeave={() => setHoveredCity(null)}
-            >
-              {/* Marker dot */}
-              <div
-                className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                  isHovered ? 'scale-150' : 'scale-100'
-                }`}
-                style={{ backgroundColor: risk.color }}
+      <div className="relative w-full bg-[#EBF4F6] rounded-xl border border-[#7AB2B2]/40 overflow-hidden" style={{ minHeight: 360 }}>
+        <svg
+          viewBox={`0 0 ${INDIA.width} ${INDIA.height}`}
+          className="w-full h-auto"
+          style={{ maxHeight: 420 }}
+          preserveAspectRatio="xMidYMid meet"
+        >
+          {/* India map region */}
+          <rect
+            x={INDIA.width * 0.06}
+            y={INDIA.height * 0.06}
+            width={INDIA.width * 0.88}
+            height={INDIA.height * 0.88}
+            fill="#7AB2B2"
+            fillOpacity={0.08}
+            stroke="#088395"
+            strokeWidth={2}
+            strokeOpacity={0.4}
+          />
+          {/* City points */}
+          {projectedPoints.map((p) => (
+            <g key={p.city}>
+              <circle
+                cx={p.x}
+                cy={p.y}
+                r={p.isSelected ? 12 : 7}
+                fill={p.color}
+                stroke={p.isSelected ? "#09637E" : "#fff"}
+                strokeWidth={p.isSelected ? 3 : 1.5}
+                className="transition-all duration-200"
               />
-
-              {/* Tooltip */}
-              {isHovered && (
-                <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 bg-white rounded-lg shadow-xl p-3 min-w-[200px] border border-gray-200">
-                  <p className="font-semibold text-[#09637E] mb-2">{city.name}</p>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">PM2.5:</span>
-                      <span className="font-medium text-gray-900">{city.pm25} μg/m³</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">PM10:</span>
-                      <span className="font-medium text-gray-900">{city.pm10} μg/m³</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-gray-200 mt-2">
-                      <span className="text-gray-600">Risk:</span>
-                      <span
-                        className="font-medium px-2 py-0.5 rounded text-xs"
-                        style={{
-                          backgroundColor: risk.bgColor,
-                          color: risk.color
-                        }}
-                      >
-                        {risk.level}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+              {p.isSelected && (
+                <text
+                  x={p.x}
+                  y={p.y - 18}
+                  textAnchor="middle"
+                  fill="#09637E"
+                  fontSize="12"
+                  fontWeight="600"
+                >
+                  {p.city} ({p.pm25})
+                </text>
               )}
-            </div>
-          );
-        })}
+            </g>
+          ))}
+        </svg>
+      </div>
+      <div className="flex gap-4 mt-4 justify-center text-sm flex-wrap">
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-red-500" />
+          High
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-amber-500" />
+          Medium
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-emerald-500" />
+          Low
+        </span>
       </div>
     </div>
   );
