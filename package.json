@@ -2,7 +2,10 @@
   "name": "cih-sdg3",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
+    "build": "cd Frontend && npm install && npm run build",
+    "vercel-build": "cd Frontend && npm install && npm run build",
     "dev": "cd Frontend && npm install && npm run dev",
     "dev:backend": "cd Backend && npm install && npm run dev",
     "dev:frontend": "cd Frontend && npm install && npm run dev",
