@@ -234,6 +234,7 @@ router.post("/", async (req, res) => {
       const airVisualData = await airVisualClient.getCityData(cityKey, state);
       
       if (airVisualData) {
+        console.log(`AirVisual data for ${cityKey}:`, JSON.stringify(airVisualData, null, 2));
         pollutants = {
           pm25: airVisualData.pollutants.pm25?.concentration || 0,
           pm10: airVisualData.pollutants.pm10?.concentration || 0,

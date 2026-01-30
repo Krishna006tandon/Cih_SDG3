@@ -3,11 +3,11 @@
   "builds": [
     {
       "src": "Frontend/package.json",
-      "outputDirectory": "Frontend/dist",
       "use": "@vercel/static-build",
       "config": {
         "distDir": "Frontend/dist"
       }
     }
-  ]
+  ],
+  "outputDirectory": "Frontend/dist"
 }
