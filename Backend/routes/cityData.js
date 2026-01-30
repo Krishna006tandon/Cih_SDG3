@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { cityCoordinates } from "../data/cityCoordinates.js";
 import { cityPollutionData } from "../data/cityPollutionData.js";
-import { getRiskLevel, getDiseasesByRisk } from "../utils/healthRisk.js";
+import {
+  getRiskLevel,
+  getDiseasesByRisk,
+  calculateOverallAQI,
+  getAQICategory,
+  getRiskFromAQI,
+  getDetailedDiseases,
+  getHealthRecommendations,
+} from "../utils/healthRisk.js";
 import { getAdvisory } from "../utils/advisory.js";
 
 const router = Router();
@@ -40,12 +48,37 @@ function generateChartData(pm25, pm10) {
   return data;
 }
 
+// Parameter name mapping for OpenAQ v3
+const PARAM_MAP = {
+  pm25: "pm25",
+  pm10: "pm10",
+  o3: "o3",
+  no2: "no2",
+  so2: "so2",
+  co: "co",
+};
+
+async function fetchSensorMeasurements(sensorId, apiKey) {
+  try {
+    const dateFrom = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+    const mRes = await fetch(
+      `${OPENAQ_BASE}/sensors/${sensorId}/measurements?date_from=${dateFrom}&limit=24`,
+      { headers: { "X-API-Key": apiKey } }
+    );
+    if (mRes.ok) {
+      const mJson = await mRes.json();
+      return (mJson.results || []).map((r) => r.value).filter((v) => v != null);
+    }
+  } catch (_) {}
+  return [];
+}
+
 async function fetchOpenAQData(lat, lng) {
   const apiKey = process.env.OPENAQ_API_KEY;
   if (!apiKey) return null;
 
   try {
-    const url = `${OPENAQ_BASE}/locations?coordinates=${lat},${lng}&radius=25000&limit=5`;
+    const url = `${OPENAQ_BASE}/locations?coordinates=${lat},${lng}&radius=25000&limit=10`;
     const res = await fetch(url, {
       headers: { "X-API-Key": apiKey },
     });
@@ -54,8 +87,15 @@ async function fetchOpenAQData(lat, lng) {
     const locations = json.results || [];
     if (locations.length === 0) return null;
 
-    let pm25Values = [];
-    let pm10Values = [];
+    // Collect values for all pollutants
+    const pollutantValues = {
+      pm25: [],
+      pm10: [],
+      o3: [],
+      no2: [],
+      so2: [],
+      co: [],
+    };
     let coords = { lat, lng };
 
     for (const loc of locations) {
@@ -63,40 +103,37 @@ async function fetchOpenAQData(lat, lng) {
         coords = { lat: loc.coordinates.latitude, lng: loc.coordinates.longitude };
       }
       const sensors = loc.sensors || [];
-      for (const s of sensors) {
-        const param = s.parameter?.name;
-        if (param === "pm25") {
-          try {
-            const mRes = await fetch(
-              `${OPENAQ_BASE}/sensors/${s.id}/measurements?date_from=${new Date(Date.now() - 86400000).toISOString().split("T")[0]}&limit=24`,
-              { headers: { "X-API-Key": apiKey } }
-            );
-            if (mRes.ok) {
-              const mJson = await mRes.json();
-              const vals = (mJson.results || []).map((r) => r.value).filter((v) => v != null);
-              pm25Values.push(...vals);
-            }
-          } catch (_) {}
-        } else if (param === "pm10") {
-          try {
-            const mRes = await fetch(
-              `${OPENAQ_BASE}/sensors/${s.id}/measurements?date_from=${new Date(Date.now() - 86400000).toISOString().split("T")[0]}&limit=24`,
-              { headers: { "X-API-Key": apiKey } }
-            );
-            if (mRes.ok) {
-              const mJson = await mRes.json();
-              const vals = (mJson.results || []).map((r) => r.value).filter((v) => v != null);
-              pm10Values.push(...vals);
-            }
-          } catch (_) {}
+      
+      // Fetch measurements for each sensor in parallel
+      const sensorPromises = sensors.map(async (s) => {
+        const paramName = s.parameter?.name;
+        if (paramName && PARAM_MAP[paramName]) {
+          const vals = await fetchSensorMeasurements(s.id, apiKey);
+          return { param: paramName, values: vals };
+        }
+        return null;
+      });
+
+      const results = await Promise.all(sensorPromises);
+      for (const r of results) {
+        if (r && r.values.length > 0) {
+          pollutantValues[r.param].push(...r.values);
         }
       }
     }
 
-    const pm25 = pm25Values.length ? pm25Values.reduce((a, b) => a + b, 0) / pm25Values.length : null;
-    const pm10 = pm10Values.length ? pm10Values.reduce((a, b) => a + b, 0) / pm10Values.length : null;
-
-    return { pm25, pm10, coords };
+    // Calculate averages
+    const avg = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null;
+    
+    return {
+      pm25: avg(pollutantValues.pm25),
+      pm10: avg(pollutantValues.pm10),
+      o3: avg(pollutantValues.o3),
+      no2: avg(pollutantValues.no2),
+      so2: avg(pollutantValues.so2),
+      co: avg(pollutantValues.co),
+      coords,
+    };
   } catch (_) {
     return null;
   }
@@ -106,11 +143,30 @@ function getStaticFallback(cityKey) {
   const coords = cityCoordinates[cityKey];
   const pollution = cityPollutionData[cityKey];
   if (!coords) return null;
+  
   if (pollution) {
-    return { pm25: pollution.pm25, pm10: pollution.pm10, coords };
+    return {
+      pm25: pollution.pm25,
+      pm10: pollution.pm10,
+      o3: pollution.o3 || null,
+      no2: pollution.no2 || null,
+      so2: pollution.so2 || null,
+      co: pollution.co || null,
+      coords,
+    };
   }
+  
+  // Default fallback values based on typical Indian city pollution
   const base = 45;
-  return { pm25: base, pm10: Math.round(base * 1.6), coords };
+  return {
+    pm25: base,
+    pm10: Math.round(base * 1.6),
+    o3: 30,
+    no2: 25,
+    so2: 10,
+    co: 400,
+    coords,
+  };
 }
 
 router.post("/", async (req, res) => {
@@ -134,44 +190,83 @@ router.post("/", async (req, res) => {
     }
 
     const coords = cityCoordinates[cityKey];
-    let pm25 = null;
-    let pm10 = null;
+    
+    // Initialize pollutant values
+    let pollutants = {
+      pm25: null,
+      pm10: null,
+      o3: null,
+      no2: null,
+      so2: null,
+      co: null,
+    };
     let finalCoords = coords;
 
-    // Use static data first for hackathon stability
+    // Use static data first for stability
     const fallback = getStaticFallback(cityKey);
     if (fallback) {
-      pm25 = fallback.pm25;
-      pm10 = fallback.pm10;
+      pollutants = {
+        pm25: fallback.pm25,
+        pm10: fallback.pm10,
+        o3: fallback.o3,
+        no2: fallback.no2,
+        so2: fallback.so2,
+        co: fallback.co,
+      };
       finalCoords = fallback.coords;
     }
 
-    // Optionally try OpenAQ for real-time data (fallback to static if API fails)
+    // Try OpenAQ for real-time data (fallback to static if API fails)
     const openaqData = await fetchOpenAQData(coords.lat, coords.lng);
-    if (openaqData && openaqData.pm25 != null && openaqData.pm10 != null) {
-      pm25 = openaqData.pm25;
-      pm10 = openaqData.pm10;
+    if (openaqData) {
+      // Update with any available real-time data
+      if (openaqData.pm25 != null) pollutants.pm25 = openaqData.pm25;
+      if (openaqData.pm10 != null) pollutants.pm10 = openaqData.pm10;
+      if (openaqData.o3 != null) pollutants.o3 = openaqData.o3;
+      if (openaqData.no2 != null) pollutants.no2 = openaqData.no2;
+      if (openaqData.so2 != null) pollutants.so2 = openaqData.so2;
+      if (openaqData.co != null) pollutants.co = openaqData.co;
       if (openaqData.coords) finalCoords = openaqData.coords;
     }
 
-    if (pm25 == null) pm25 = 45;
-    if (pm10 == null) pm10 = 78;
+    // Ensure minimum values for PM
+    if (pollutants.pm25 == null) pollutants.pm25 = 45;
+    if (pollutants.pm10 == null) pollutants.pm10 = 78;
 
-    const risk = getRiskLevel(pm25);
+    // Calculate AQI
+    const aqi = calculateOverallAQI(pollutants);
+    const aqiInfo = getAQICategory(aqi);
+    const risk = getRiskFromAQI(aqi);
     const diseases = getDiseasesByRisk(risk);
+    const detailedDiseases = getDetailedDiseases(aqi);
+    const healthRecommendations = getHealthRecommendations(aqi);
     const advisory = getAdvisory(risk);
-    const chartData = generateChartData(pm25, pm10);
+    const chartData = generateChartData(pollutants.pm25, pollutants.pm10);
 
     const payload = {
       city: normalizedCity,
-      pm25: Math.round(pm25 * 10) / 10,
-      pm10: Math.round(pm10 * 10) / 10,
+      // All pollutants
+      pm25: Math.round(pollutants.pm25 * 10) / 10,
+      pm10: Math.round(pollutants.pm10 * 10) / 10,
+      o3: pollutants.o3 != null ? Math.round(pollutants.o3 * 10) / 10 : null,
+      no2: pollutants.no2 != null ? Math.round(pollutants.no2 * 10) / 10 : null,
+      so2: pollutants.so2 != null ? Math.round(pollutants.so2 * 10) / 10 : null,
+      co: pollutants.co != null ? Math.round(pollutants.co * 10) / 10 : null,
+      // AQI info
+      aqi,
+      aqiCategory: aqiInfo.category,
+      aqiColor: aqiInfo.color,
+      // Risk and health
       risk,
       diseases,
+      detailedDiseases,
+      healthRecommendations,
+      // Location and chart
       coordinates: { lat: finalCoords.lat, lng: finalCoords.lng },
       chartData,
       advisory,
       disclaimer: "For awareness and prevention only. Not medical diagnosis.",
+      lastUpdated: new Date().toISOString(),
     };
 
     req.cityCache?.set(cacheKey, payload);

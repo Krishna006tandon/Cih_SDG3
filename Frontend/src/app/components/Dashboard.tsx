@@ -5,19 +5,46 @@ import { DiseaseCards } from "./DiseaseCards";
 import { ChartsBlock } from "./ChartsBlock";
 import { IndiaHeatMap } from "./IndiaHeatMap";
 import { AdvisoryBlock } from "./AdvisoryBlock";
+import { AQIDisplay } from "./AQIDisplay";
+import { PollutantCards } from "./PollutantCards";
+import { HealthRecommendations } from "./HealthRecommendations";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
+
+interface DetailedDisease {
+  name: string;
+  icon: string;
+  threshold: number;
+  risk: string;
+}
+
+interface HealthRecommendation {
+  airPurifier: string;
+  carFilter: string;
+  mask: string;
+  stayIndoor: string;
+}
 
 interface DashboardData {
   city: string;
   pm25: number;
   pm10: number;
+  o3: number | null;
+  no2: number | null;
+  so2: number | null;
+  co: number | null;
+  aqi: number | null;
+  aqiCategory: string;
+  aqiColor: string;
   risk: string;
   diseases: string[];
+  detailedDiseases: DetailedDisease[];
+  healthRecommendations: HealthRecommendation;
   coordinates: { lat: number; lng: number };
   chartData: { time: string; pm25: number; pm10: number }[];
   advisory: string;
   disclaimer: string;
+  lastUpdated: string;
 }
 
 interface HeatMapData {
@@ -138,7 +165,39 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 relative z-10 space-y-8">
+        {/* AQI Display with gauge */}
         <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]">
+          <AQIDisplay
+            aqi={data.aqi}
+            aqiCategory={data.aqiCategory}
+            aqiColor={data.aqiColor}
+            city={data.city}
+          />
+        </div>
+
+        {/* All Pollutants */}
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.1s" }}>
+          <PollutantCards
+            pm25={data.pm25}
+            pm10={data.pm10}
+            o3={data.o3}
+            no2={data.no2}
+            so2={data.so2}
+            co={data.co}
+            city={data.city}
+          />
+        </div>
+
+        {/* Health Recommendations */}
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.15s" }}>
+          <HealthRecommendations
+            aqi={data.aqi}
+            aqiCategory={data.aqiCategory}
+            recommendations={data.healthRecommendations}
+          />
+        </div>
+
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.2s" }}>
           <SummaryCards
             pm25={data.pm25}
             pm10={data.pm10}
@@ -146,10 +205,10 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
             city={data.city}
           />
         </div>
-        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.15s" }}>
-          <DiseaseCards diseases={data.diseases} risk={data.risk} />
-        </div>
         <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.25s" }}>
+          <DiseaseCards diseases={data.diseases} risk={data.risk} detailedDiseases={data.detailedDiseases} />
+        </div>
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.3s" }}>
           <ChartsBlock chartData={data.chartData} />
         </div>
         <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.35s" }}>
@@ -159,7 +218,7 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
             selectedCoords={data.coordinates}
           />
         </div>
-        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.45s" }}>
+        <div className="animate-slide-up opacity-0 [animation-fill-mode:forwards]" style={{ animationDelay: "0.4s" }}>
           <AdvisoryBlock advisory={data.advisory} disclaimer={data.disclaimer} />
         </div>
       </main>
