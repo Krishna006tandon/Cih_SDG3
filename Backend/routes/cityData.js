@@ -465,6 +465,112 @@ router.post("/", async (req, res) => {
           fallbackUsed = true;
         }
       }
+
+      // Check if AirVisual API key is configured
+      const airVisualApiKey = process.env.AIRVISUAL_API_KEY;
+      if (!airVisualApiKey || airVisualApiKey === 'your-airvisual-api-key-here') {
+        console.log('⚠️ AirVisual API key not configured, skipping real-time data fetch');
+        throw new Error('API key not configured');
+      }
+      
+      // Try AirVisual API first for real-time data
+      // Use appropriate state names for all supported cities
+      const stateMap = {
+        "Delhi": "Delhi",
+        "Gurgaon": "Haryana",
+        "Noida": "Uttar Pradesh",
+        "Ghaziabad": "Uttar Pradesh",
+        "Mumbai": "Maharashtra",
+        "Pune": "Maharashtra",
+        "Nagpur": "Maharashtra",
+        "Thane": "Maharashtra",
+        "Nashik": "Maharashtra",
+        "Aurangabad": "Maharashtra",
+        "Kolkata": "West Bengal",
+        "Howrah": "West Bengal",
+        "Chennai": "Tamil Nadu",
+        "Coimbatore": "Tamil Nadu",
+        "Madurai": "Tamil Nadu",
+        "Tiruchirappalli": "Tamil Nadu",
+        "Bengaluru": "Karnataka",
+        "Mysore": "Karnataka",
+        "Hubli": "Karnataka",
+        "Mangalore": "Karnataka",
+        "Hyderabad": "Telangana",
+        "Secunderabad": "Telangana",
+        "Ahmedabad": "Gujarat",
+        "Surat": "Gujarat",
+        "Vadodara": "Gujarat",
+        "Rajkot": "Gujarat",
+        "Jaipur": "Rajasthan",
+        "Jodhpur": "Rajasthan",
+        "Kota": "Rajasthan",
+        "Lucknow": "Uttar Pradesh",
+        "Kanpur": "Uttar Pradesh",
+        "Agra": "Uttar Pradesh",
+        "Allahabad": "Uttar Pradesh",
+        "Bareilly": "Uttar Pradesh",
+        "Meerut": "Uttar Pradesh",
+        "Faridabad": "Haryana",
+        "Gurgaon": "Haryana",
+        "Indore": "Madhya Pradesh",
+        "Bhopal": "Madhya Pradesh",
+        "Jabalpur": "Madhya Pradesh",
+        "Gwalior": "Madhya Pradesh",
+        "Raipur": "Chhattisgarh",
+        "Dhanbad": "Jharkhand",
+        "Ranchi": "Jharkhand",
+        "Patna": "Bihar",
+        "Amritsar": "Punjab",
+        "Ludhiana": "Punjab",
+        "Chandigarh": "Chandigarh",
+        "Jammu": "Jammu and Kashmir",
+        "Srinagar": "Jammu and Kashmir",
+        "Shimla": "Himachal Pradesh",
+        "Dehradun": "Uttarakhand",
+        "Guwahati": "Assam",
+        "Kochi": "Kerala",
+        "Thiruvananthapuram": "Kerala",
+        "Bhubaneswar": "Odisha",
+        "Cuttack": "Odisha",
+        "Visakhapatnam": "Andhra Pradesh",
+        "Vijayawada": "Andhra Pradesh"
+      };
+      
+      const state = stateMap[cityKey] || "Maharashtra";
+      
+      const airVisualData = await airVisualClient.getCityData(cityKey, state);
+      
+      if (airVisualData) {
+        console.log(`✅ AirVisual data successfully retrieved for ${cityKey}, ${state}`);
+        console.log(`AirVisual data for ${cityKey}:`, JSON.stringify(airVisualData, null, 2));
+        pollutants = {
+          pm25: airVisualData.pollutants.pm25?.concentration || 0,
+          pm10: airVisualData.pollutants.pm10?.concentration || 0,
+          o3: airVisualData.pollutants.o3?.concentration || 0,
+          no2: airVisualData.pollutants.no2?.concentration || 0,
+          so2: airVisualData.pollutants.so2?.concentration || 0,
+          co: airVisualData.pollutants.co?.concentration || 0,
+        };
+        aqi = airVisualData.aqi;
+        mainPollutant = airVisualData.mainPollutant;
+        finalCoords = {
+          lat: airVisualData.coordinates[1],
+          lng: airVisualData.coordinates[0]
+        };
+        weather = airVisualData.weather;
+      } else {
+        console.log(`⚠️ No AirVisual data returned for ${cityKey}, ${state}`);
+        throw new Error('No data returned from AirVisual API');
+      }
+    } catch (error) {
+      // Handle specific error cases
+      if (error.message === 'API key not configured') {
+        console.log(`ℹ️ Using static fallback data for ${cityKey} (API key not configured)`);
+      } else {
+        console.log(`AirVisual API failed for ${cityKey}, falling back to static data:`, error.message);
+      }
+
       
       // Step 3: If both area and city data failed, use fallbacks
       if (aqi === 0) {
@@ -485,6 +591,7 @@ router.post("/", async (req, res) => {
           dataSource = "static-data";
         }
 
+
         // Try Open-Meteo as secondary fallback for real-time data
         try {
           const openMeteoData = await fetchOpenMeteoData(coordsToUse.lat, coordsToUse.lng);
@@ -498,6 +605,23 @@ router.post("/", async (req, res) => {
         } catch (openMeteoError) {
           console.log(`Open-Meteo fallback failed:`, openMeteoError.message);
         }
+
+      // Try OpenAQ as secondary fallback (only if API key is configured)
+      const openaqApiKey = process.env.OPENAQ_API_KEY;
+      if (openaqApiKey && openaqApiKey !== 'your-openaq-api-key-here') {
+        const openaqData = await fetchOpenAQData(coords.lat, coords.lng);
+        if (openaqData) {
+          if (openaqData.pm25 != null) pollutants.pm25 = openaqData.pm25;
+          if (openaqData.pm10 != null) pollutants.pm10 = openaqData.pm10;
+          if (openaqData.o3 != null) pollutants.o3 = openaqData.o3;
+          if (openaqData.no2 != null) pollutants.no2 = openaqData.no2;
+          if (openaqData.so2 != null) pollutants.so2 = openaqData.so2;
+          if (openaqData.co != null) pollutants.co = openaqData.co;
+          if (openaqData.coords) finalCoords = openaqData.coords;
+        }
+      } else if (error.message !== 'API key not configured') {
+        console.log('⚠️ OpenAQ API key not configured, skipping secondary fallback');
+
       }
     } catch (innerError) {
       console.log(`Inner processing error:`, innerError.message);

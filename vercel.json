@@ -2,4 +2,39 @@
   "version": 2,
   "buildCommand": "cd Frontend && npm install && npm run build",
   "outputDirectory": "public"
+
+  "builds": [
+    {
+      "src": "Frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["Backend/**"]
+      }
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/city",
+      "destination": "/api/city.js"
+    },
+    {
+      "source": "/api/heatmap",
+      "destination": "/api/heatmap/index.js"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/Frontend/dist/index.html"
+    }
+  ]
 }
