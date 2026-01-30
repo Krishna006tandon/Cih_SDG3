@@ -572,39 +572,38 @@ router.post("/", async (req, res) => {
       }
 
       
-      // Step 3: If both area and city data failed, use fallbacks
-      if (aqi === 0) {
-        console.log(`Using fallback data for ${locationName}`);
-        
-        // Fallback to static data
-        const fallback = getStaticFallback(cityKey);
-        if (fallback) {
-          pollutants = {
-            pm25: fallback.pm25,
-            pm10: fallback.pm10,
-            o3: fallback.o3,
-            no2: fallback.no2,
-            so2: fallback.so2,
-            co: fallback.co,
-          };
-          finalCoords = fallback.coords;
-          dataSource = "static-data";
-        }
+      // Apply fallback data when AirVisual fails
+      console.log(`Using fallback data for ${locationName}`);
+      
+      // Fallback to static data
+      const fallback = getStaticFallback(cityKey);
+      if (fallback) {
+        pollutants = {
+          pm25: fallback.pm25,
+          pm10: fallback.pm10,
+          o3: fallback.o3,
+          no2: fallback.no2,
+          so2: fallback.so2,
+          co: fallback.co,
+        };
+        finalCoords = fallback.coords;
+        dataSource = "static-data";
+        console.log(`Applied static fallback data for ${cityKey}: PM2.5=${fallback.pm25}, PM10=${fallback.pm10}`);
+      }
 
-
-        // Try Open-Meteo as secondary fallback for real-time data
-        try {
-          const openMeteoData = await fetchOpenMeteoData(coordsToUse.lat, coordsToUse.lng);
-          if (openMeteoData) {
-            if (openMeteoData.pm25 != null) pollutants.pm25 = openMeteoData.pm25;
-            if (openMeteoData.pm10 != null) pollutants.pm10 = openMeteoData.pm10;
-            if (openMeteoData.coords) finalCoords = openMeteoData.coords;
-            dataSource = "Open-Meteo";
-            console.log(`Successfully fetched Open-Meteo fallback data for ${locationName}`);
-          }
-        } catch (openMeteoError) {
-          console.log(`Open-Meteo fallback failed:`, openMeteoError.message);
+      // Try Open-Meteo as secondary fallback for real-time data
+      try {
+        const openMeteoData = await fetchOpenMeteoData(coordsToUse.lat, coordsToUse.lng);
+        if (openMeteoData) {
+          if (openMeteoData.pm25 != null) pollutants.pm25 = openMeteoData.pm25;
+          if (openMeteoData.pm10 != null) pollutants.pm10 = openMeteoData.pm10;
+          if (openMeteoData.coords) finalCoords = openMeteoData.coords;
+          dataSource = "Open-Meteo";
+          console.log(`Successfully fetched Open-Meteo fallback data for ${locationName}`);
         }
+      } catch (openMeteoError) {
+        console.log(`Open-Meteo fallback failed:`, openMeteoError.message);
+      }
 
       // Try OpenAQ as secondary fallback (only if API key is configured)
       const openaqApiKey = process.env.OPENAQ_API_KEY;
@@ -621,12 +620,7 @@ router.post("/", async (req, res) => {
         }
       } else if (error.message !== 'API key not configured') {
         console.log('⚠️ OpenAQ API key not configured, skipping secondary fallback');
-
       }
-    } catch (innerError) {
-      console.log(`Inner processing error:`, innerError.message);
-      fallbackUsed = true;
-    }
 
     // Ensure minimum values for PM
     if (pollutants.pm25 == null) pollutants.pm25 = 45;
@@ -671,6 +665,7 @@ router.post("/", async (req, res) => {
 
     req.cityCache?.set(cacheKey, responsePayload);
     res.json(responsePayload);
+  }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Temporary service issue." });

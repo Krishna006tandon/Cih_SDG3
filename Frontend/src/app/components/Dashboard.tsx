@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Loader2, RefreshCw, Activity, Filter, Calendar, Wind, MapPin, Heart, Eye, Brain } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, Activity, Calendar, Wind, MapPin, Heart, Eye, Brain } from "lucide-react";
 import { SummaryCards } from "./SummaryCards";
 import { DiseaseCards } from "./DiseaseCards";
 import { ChartsBlock } from "./ChartsBlock";
@@ -10,10 +10,6 @@ import { PollutantCards } from "./PollutantCards";
 import { HealthRecommendations } from "./HealthRecommendations";
 
 const API_BASE = import.meta.env.VITE_API_URL || "/api";
-
-type PollutantType = "pm25" | "pm10" | "aqi";
-
-type TimeRange = "1h" | "6h" | "24h" | "7d";
 
 interface DetailedDisease {
   name: string;
@@ -101,8 +97,6 @@ export function Dashboard({ state, city, area, onBack }: DashboardProps) {
   const [heatmapData, setHeatmapData] = useState<HeatMapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPollutant, setSelectedPollutant] = useState<PollutantType>("aqi");
-  const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>("24h");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -278,56 +272,7 @@ export function Dashboard({ state, city, area, onBack }: DashboardProps) {
           </div>
         </div>
 
-        {/* Dashboard Controls */}
-        <div className="bg-white rounded-2xl p-5 shadow-lg mb-8 border border-[#7AB2B2]/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h3 className="text-lg font-semibold text-[#09637E] flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Dashboard Controls
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {/* Pollutant Type Filter */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5 font-medium">Pollutant Type</label>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  {(['aqi', 'pm25', 'pm10'] as PollutantType[]).map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => setSelectedPollutant(type)}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all capitalize ${
-                        selectedPollutant === type
-                          ? 'bg-[#088395] text-white shadow-sm'
-                          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Time Range Filter */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1.5 font-medium">Time Range</label>
-                <div className="flex bg-gray-100 rounded-lg p-1">
-                  {(['1h', '6h', '24h', '7d'] as TimeRange[]).map((range) => (
-                    <button
-                      key={range}
-                      onClick={() => setSelectedTimeRange(range)}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
-                        selectedTimeRange === range
-                          ? 'bg-[#088395] text-white shadow-sm'
-                          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-200'
-                      }`}
-                    >
-                      {range}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         {/* Main Dashboard Content */}
         <div className="space-y-8">

@@ -21,8 +21,27 @@ const aqiRanges = [
 
 function getAQIPercentage(aqi: number | null): number {
   if (aqi === null) return 0;
-  // Scale: 0-500 mapped to 0-100%
-  return Math.min((aqi / 500) * 100, 100);
+  
+  // Calculate correct percentage position on the AQI scale
+  if (aqi <= 50) {
+    // Good: 0-50 maps to 0-16.67% (1/6 of the bar)
+    return (aqi / 50) * 16.67;
+  } else if (aqi <= 100) {
+    // Satisfactory: 51-100 maps to 16.67-33.33%
+    return 16.67 + ((aqi - 50) / 50) * 16.67;
+  } else if (aqi <= 200) {
+    // Moderate: 101-200 maps to 33.33-50%
+    return 33.33 + ((aqi - 100) / 100) * 16.67;
+  } else if (aqi <= 300) {
+    // Poor: 201-300 maps to 50-66.67%
+    return 50 + ((aqi - 200) / 100) * 16.67;
+  } else if (aqi <= 400) {
+    // Very Poor: 301-400 maps to 66.67-83.33%
+    return 66.67 + ((aqi - 300) / 100) * 16.67;
+  } else {
+    // Severe: 401-500 maps to 83.33-100%
+    return 83.33 + Math.min(((aqi - 400) / 100) * 16.67, 16.67);
+  }
 }
 
 export function AQIDisplay({ aqi, aqiCategory, aqiColor, city, area, source, fallbackUsed }: AQIDisplayProps) {
