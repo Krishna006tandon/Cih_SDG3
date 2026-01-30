@@ -1,10 +1,10 @@
-// Vercel API route for city data
+// Vercel API route for city data - updated imports
 // This imports the backend logic to run serverlessly on Vercel
 
 // Import backend dependencies (these need to be available in the API route)
-import { cityCoordinates } from "../../Backend/data/cityCoordinates.js";
-import { cityPollutionData } from "../../Backend/data/cityPollutionData.js";
-import airVisualClient from "../../Backend/utils/airVisualClient.js";
+import { cityCoordinates } from "./data/cityCoordinates.js";
+import { cityPollutionData } from "./data/cityPollutionData.js";
+import airVisualClient from "./utils/airVisualClient.js";
 import {
   getRiskLevel,
   getDiseasesByRisk,
@@ -13,8 +13,8 @@ import {
   getRiskFromAQI,
   getDetailedDiseases,
   getHealthRecommendations,
-} from "../../Backend/utils/healthRisk.js";
-import { getAdvisory } from "../../Backend/utils/advisory.js";
+} from "./utils/healthRisk.js";
+import { getAdvisory } from "./utils/advisory.js";
 
 // Parameter name mapping for OpenAQ v3
 const PARAM_MAP = {
