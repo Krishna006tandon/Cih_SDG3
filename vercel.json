@@ -10,28 +10,25 @@
     },
     {
       "src": "api/**/*.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["Backend/**"]
-      }
+      "use": "@vercel/node"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/city",
-      "destination": "/api/city.js"
+      "src": "/api/city",
+      "dest": "/api/city.js"
     },
     {
-      "source": "/api/heatmap",
-      "destination": "/api/heatmap"
+      "src": "/api/heatmap",
+      "dest": "/api/heatmap"
     },
     {
-      "source": "/api/health",
-      "destination": "/api/health"
+      "src": "/api/health",
+      "dest": "/api/health"
     },
     {
-      "source": "/(.*)",
-      "destination": "/Frontend/dist/index.html"
+      "src": "/(.*)",
+      "dest": "/Frontend/dist/index.html"
     }
   ]
 }
