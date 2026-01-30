@@ -113,3 +113,4 @@ export function AQIDisplay({ aqi, aqiCategory, aqiColor, city }: AQIDisplayProps
     </div>
   );
 }
+export default AQIDisplay;

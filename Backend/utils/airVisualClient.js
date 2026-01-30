@@ -37,7 +37,9 @@ class AirVisualClient {
       });
 
       if (response.data.status === 'success') {
+        console.log(`Raw AirVisual API response for ${city}, ${state}:`, JSON.stringify(response.data.data, null, 2));
         const data = this.transformCityData(response.data.data);
+        console.log(`Transformed data for ${city}, ${state}:`, JSON.stringify(data, null, 2));
         // Cache the result
         this.cache.set(cacheKey, {
           data: data,

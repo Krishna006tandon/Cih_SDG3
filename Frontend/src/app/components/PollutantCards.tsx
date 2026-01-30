@@ -68,3 +68,4 @@ export function PollutantCards({ pm25, pm10, o3, no2, so2, co, city }: Pollutant
     </div>
   );
 }
+export default PollutantCards;
