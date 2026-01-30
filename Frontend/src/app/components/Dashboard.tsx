@@ -30,7 +30,9 @@ interface HealthRecommendation {
 }
 
 interface DashboardData {
+  state: string;
   city: string;
+  area?: string;
   pm25: number;
   pm10: number;
   o3: number | null;
@@ -50,6 +52,10 @@ interface DashboardData {
   disclaimer: string;
   lastUpdated: string;
   healthInsights?: HealthInsights;
+  source?: string;
+  fallbackUsed?: boolean;
+  locationType?: string;
+  locationAttempted?: string;
 }
 
 interface HeatMapData {
@@ -86,10 +92,11 @@ interface HealthInsights {
 interface DashboardProps {
   state: string;
   city: string;
+  area?: string;
   onBack: () => void;
 }
 
-export function Dashboard({ state, city, onBack }: DashboardProps) {
+export function Dashboard({ state, city, area, onBack }: DashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [heatmapData, setHeatmapData] = useState<HeatMapData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -102,10 +109,15 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
     setLoading(true);
     setError(null);
     try {
+      const requestBody: any = { state, city };
+      if (area) {
+        requestBody.area = area;
+      }
+      
       const cityRes = await fetch(`${API_BASE}/city`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ city }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!cityRes.ok) {
@@ -198,7 +210,12 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
               <div>
                 <h1 className="text-xl font-bold text-[#09637E] flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-[#088395]" />
-                  {data.city} Health Dashboard
+                  {area ? `${area}, ${data.city}` : data.city} Health Dashboard
+                  {area && (
+                    <span className="text-sm font-normal text-[#088395] bg-[#088395]/10 px-2 py-1 rounded-full ml-2">
+                      Area Level
+                    </span>
+                  )}
                 </h1>
                 <div className="flex items-center gap-3 mt-1">
                   <span className="text-sm text-[#088395] font-medium bg-[#088395]/10 px-2.5 py-0.5 rounded-full">
@@ -208,6 +225,11 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                     LIVE DATA
                   </span>
+                  {area && (
+                    <span className="text-xs text-[#088395] bg-[#088395]/10 px-2 py-0.5 rounded-full">
+                      Precise {area} data
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -316,6 +338,9 @@ export function Dashboard({ state, city, onBack }: DashboardProps) {
               aqiCategory={data.aqiCategory}
               aqiColor={data.aqiColor}
               city={data.city}
+              area={data.area}
+              source={data.source}
+              fallbackUsed={data.fallbackUsed}
             />
           </div>
 

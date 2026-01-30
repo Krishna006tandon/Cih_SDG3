@@ -7,10 +7,12 @@ export default function App() {
   const [view, setView] = useState<"selector" | "dashboard">("selector");
   const [selectedState, setSelectedState] = useState("");
   const [selectedCity, setSelectedCity] = useState("");
+  const [selectedArea, setSelectedArea] = useState<string | undefined>(undefined);
 
-  const handleLocationSelect = (state: string, city: string) => {
+  const handleLocationSelect = (state: string, city: string, area?: string) => {
     setSelectedState(state);
     setSelectedCity(city);
+    setSelectedArea(area);
     setView("dashboard");
   };
 
@@ -24,6 +26,7 @@ export default function App() {
         <Dashboard
           state={selectedState}
           city={selectedCity}
+          area={selectedArea}
           onBack={handleBack}
         />
         <GeminiChatBot />

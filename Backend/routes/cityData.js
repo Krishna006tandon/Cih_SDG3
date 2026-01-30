@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { cityCoordinates } from "../data/cityCoordinates.js";
 import { cityPollutionData } from "../data/cityPollutionData.js";
+import { areaCoordinates, getAreaCoordinates, areaExists } from "../data/areaCoordinates.js";
 import airVisualClient from "../utils/airVisualClient.js";
 import {
   getRiskLevel,
@@ -147,6 +148,27 @@ async function fetchSensorMeasurements(sensorId, apiKey) {
   return [];
 }
 
+async function fetchOpenMeteoData(lat, lng) {
+  try {
+    const url = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lng}&current=pm10,pm2_5`;
+    const res = await fetch(url);
+    
+    if (!res.ok) return null;
+    
+    const json = await res.json();
+    const current = json.current || {};
+    
+    return {
+      pm25: current.pm2_5 !== undefined ? current.pm2_5 : null,
+      pm10: current.pm10 !== undefined ? current.pm10 : null,
+      coords: { lat, lng }
+    };
+  } catch (error) {
+    console.error('Open-Meteo API Error:', error.message);
+    return null;
+  }
+}
+
 async function fetchOpenAQData(lat, lng) {
   const apiKey = process.env.OPENAQ_API_KEY;
   if (!apiKey) return null;
@@ -245,10 +267,15 @@ function getStaticFallback(cityKey) {
 
 router.post("/", async (req, res) => {
   try {
-    const { city } = req.body;
+    const { state, city, area } = req.body;
 
     if (!city || typeof city !== "string") {
       return res.status(400).json({ error: "City not supported." });
+    }
+
+    // Validate area if provided
+    if (area && typeof area === "string" && !areaExists(city, area)) {
+      return res.status(400).json({ error: `Area '${area}' not found in ${city}.` });
     }
 
     const cityKey = getCityKey(city);
@@ -257,13 +284,55 @@ router.post("/", async (req, res) => {
     }
 
     const normalizedCity = cityKey;
-    const cacheKey = normalizedCity.toLowerCase();
+    const cacheKey = `${normalizedCity.toLowerCase()}${area ? `_area_${area.toLowerCase().replace(/\s+/g, '_')}` : ''}`;
     const cached = req.cityCache?.get(cacheKey);
     if (cached) {
       return res.json(cached);
     }
 
-    const coords = cityCoordinates[cityKey];
+    // Determine coordinates to use
+    let coordsToUse = cityCoordinates[cityKey];
+    let locationType = "city";
+    let locationName = cityKey;
+    
+    if (area && areaExists(cityKey, area)) {
+      coordsToUse = getAreaCoordinates(cityKey, area);
+      locationType = "area";
+      locationName = area;
+    }
+    
+    if (!coordsToUse) {
+      return res.status(400).json({ error: "Location coordinates not found." });
+    }
+    
+    // Initialize response structure
+    let responsePayload = {
+      state: state || getCityState(cityKey),
+      city: normalizedCity,
+      area: area || null,
+      coordinates: { lat: coordsToUse.lat, lng: coordsToUse.lng },
+      pm25: 0,
+      pm10: 0,
+      o3: null,
+      no2: null,
+      so2: null,
+      co: null,
+      aqi: 0,
+      aqiCategory: "",
+      aqiColor: "",
+      risk: "",
+      diseases: [],
+      detailedDiseases: [],
+      healthRecommendations: {},
+      chartData: [],
+      advisory: "",
+      disclaimer: "For awareness and prevention only. Not medical diagnosis.",
+      lastUpdated: new Date().toISOString(),
+      source: "",
+      fallbackUsed: false,
+      locationType: locationType,
+      locationAttempted: locationName
+    };
     
     // Initialize pollutant values
     let pollutants = {
@@ -274,104 +343,172 @@ router.post("/", async (req, res) => {
       so2: null,
       co: null,
     };
-    let finalCoords = coords;
+    let finalCoords = coordsToUse;
     let aqi = 0;
     let mainPollutant = "Unknown";
     let weather = {};
+    let dataSource = "";
+    let fallbackUsed = false;
 
     try {
-      // Add small delay to respect rate limits
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // AREA-FIRST DATA FETCHING LOGIC
       
-      // Try AirVisual API first for real-time data
-      // Use appropriate state names for major cities
-      let state = "Maharashtra";
-      if (cityKey === "Delhi" || cityKey === "Gurgaon" || cityKey === "Noida" || cityKey === "Ghaziabad") {
-        state = "Delhi";
-      } else if (cityKey === "Kolkata") {
-        state = "West Bengal";
-      } else if (cityKey === "Chennai") {
-        state = "Tamil Nadu";
-      } else if (cityKey === "Bengaluru") {
-        state = "Karnataka";
-      } else if (cityKey === "Hyderabad") {
-        state = "Telangana";
-      } else if (cityKey === "Pune") {
-        state = "Maharashtra";
-      } else if (cityKey === "Ahmedabad") {
-        state = "Gujarat";
-      } else if (cityKey === "Jaipur") {
-        state = "Rajasthan";
-      } else if (cityKey === "Amritsar") {
-        state = "Punjab";
-      }
-      
-      const airVisualData = await airVisualClient.getCityData(cityKey, state);
-      
-      if (airVisualData) {
-        // Check if we have actual pollutant concentrations or just AQI
-        const hasConcentrations = airVisualData.pollutants.pm25?.concentration > 0 || 
-                                 airVisualData.pollutants.pm10?.concentration > 0;
-        
-        if (hasConcentrations) {
-          // Use actual concentrations from API
-          pollutants = {
-            pm25: airVisualData.pollutants.pm25?.concentration || 0,
-            pm10: airVisualData.pollutants.pm10?.concentration || 0,
-            o3: airVisualData.pollutants.o3?.concentration || 0,
-            no2: airVisualData.pollutants.no2?.concentration || 0,
-            so2: airVisualData.pollutants.so2?.concentration || 0,
-            co: airVisualData.pollutants.co?.concentration || 0,
-          };
-        } else {
-          // Derive concentrations from AQI when actual concentrations are not available
-          console.log(`Deriving concentrations from AQI for ${cityKey}`);
-          pollutants = deriveConcentrationsFromAQI(airVisualData.aqi, airVisualData.mainPollutant);
+      // Step 1: Try to get data from area-level nearest station
+      if (locationType === "area") {
+        try {
+          console.log(`Attempting to fetch area data for ${area} in ${cityKey}`);
+          const stationData = await airVisualClient.getNearestStation(coordsToUse.lat, coordsToUse.lng);
+          
+          if (stationData) {
+            // Check if we have actual pollutant concentrations or just AQI
+            const hasConcentrations = stationData.pollutants.pm25?.concentration > 0 || 
+                                     stationData.pollutants.pm10?.concentration > 0;
+            
+            if (hasConcentrations) {
+              // Use actual concentrations from API
+              pollutants = {
+                pm25: stationData.pollutants.pm25?.concentration || 0,
+                pm10: stationData.pollutants.pm10?.concentration || 0,
+                o3: stationData.pollutants.o3?.concentration || 0,
+                no2: stationData.pollutants.no2?.concentration || 0,
+                so2: stationData.pollutants.so2?.concentration || 0,
+                co: stationData.pollutants.co?.concentration || 0,
+              };
+            } else {
+              // Derive concentrations from AQI when actual concentrations are not available
+              console.log(`Deriving concentrations from AQI for area ${area}`);
+              pollutants = deriveConcentrationsFromAQI(stationData.aqi, stationData.mainPollutant);
+            }
+            
+            aqi = stationData.aqi;
+            mainPollutant = stationData.mainPollutant;
+            finalCoords = {
+              lat: stationData.coordinates[1],
+              lng: stationData.coordinates[0]
+            };
+            weather = stationData.weather;
+            dataSource = "IQAir-nearest-station";
+            
+            console.log(`Successfully fetched area data from nearest station for ${area}`);
+          }
+        } catch (areaError) {
+          console.log(`Area data fetch failed for ${area}, falling back to city data:`, areaError.message);
+          fallbackUsed = true;
         }
-        
-        aqi = airVisualData.aqi;
-        mainPollutant = airVisualData.mainPollutant;
-        finalCoords = {
-          lat: airVisualData.coordinates[1],
-          lng: airVisualData.coordinates[0]
-        };
-        weather = airVisualData.weather;
       }
-    } catch (error) {
-      console.log(`AirVisual API failed for ${cityKey}, falling back to static data:`, error.message);
       
-      // Fallback to static data
-      const fallback = getStaticFallback(cityKey);
-      if (fallback) {
-        pollutants = {
-          pm25: fallback.pm25,
-          pm10: fallback.pm10,
-          o3: fallback.o3,
-          no2: fallback.no2,
-          so2: fallback.so2,
-          co: fallback.co,
-        };
-        finalCoords = fallback.coords;
+      // Step 2: If area data failed or not requested, try city-level data
+      if (aqi === 0) {
+        try {
+          console.log(`Attempting to fetch city data for ${cityKey}`);
+          // Add small delay to respect rate limits
+          await new Promise(resolve => setTimeout(resolve, 200));
+          
+          // Use appropriate state names for major cities
+          let stateForApi = "Maharashtra";
+          if (cityKey === "Delhi" || cityKey === "Gurgaon" || cityKey === "Noida" || cityKey === "Ghaziabad") {
+            stateForApi = "Delhi";
+          } else if (cityKey === "Kolkata") {
+            stateForApi = "West Bengal";
+          } else if (cityKey === "Chennai") {
+            stateForApi = "Tamil Nadu";
+          } else if (cityKey === "Bengaluru") {
+            stateForApi = "Karnataka";
+          } else if (cityKey === "Hyderabad") {
+            stateForApi = "Telangana";
+          } else if (cityKey === "Pune") {
+            stateForApi = "Maharashtra";
+          } else if (cityKey === "Ahmedabad") {
+            stateForApi = "Gujarat";
+          } else if (cityKey === "Jaipur") {
+            stateForApi = "Rajasthan";
+          } else if (cityKey === "Amritsar") {
+            stateForApi = "Punjab";
+          }
+          
+          const airVisualData = await airVisualClient.getCityData(cityKey, stateForApi);
+          
+          if (airVisualData) {
+            // Check if we have actual pollutant concentrations or just AQI
+            const hasConcentrations = airVisualData.pollutants.pm25?.concentration > 0 || 
+                                     airVisualData.pollutants.pm10?.concentration > 0;
+            
+            if (hasConcentrations) {
+              // Use actual concentrations from API
+              pollutants = {
+                pm25: airVisualData.pollutants.pm25?.concentration || 0,
+                pm10: airVisualData.pollutants.pm10?.concentration || 0,
+                o3: airVisualData.pollutants.o3?.concentration || 0,
+                no2: airVisualData.pollutants.no2?.concentration || 0,
+                so2: airVisualData.pollutants.so2?.concentration || 0,
+                co: airVisualData.pollutants.co?.concentration || 0,
+              };
+            } else {
+              // Derive concentrations from AQI when actual concentrations are not available
+              console.log(`Deriving concentrations from AQI for ${cityKey}`);
+              pollutants = deriveConcentrationsFromAQI(airVisualData.aqi, airVisualData.mainPollutant);
+            }
+            
+            aqi = airVisualData.aqi;
+            mainPollutant = airVisualData.mainPollutant;
+            finalCoords = {
+              lat: airVisualData.coordinates[1],
+              lng: airVisualData.coordinates[0]
+            };
+            weather = airVisualData.weather;
+            dataSource = "IQAir-city";
+            
+            console.log(`Successfully fetched city data for ${cityKey}`);
+          }
+        } catch (cityError) {
+          console.log(`City data fetch failed for ${cityKey}, falling back to static/Open-Meteo data:`, cityError.message);
+          fallbackUsed = true;
+        }
       }
+      
+      // Step 3: If both area and city data failed, use fallbacks
+      if (aqi === 0) {
+        console.log(`Using fallback data for ${locationName}`);
+        
+        // Fallback to static data
+        const fallback = getStaticFallback(cityKey);
+        if (fallback) {
+          pollutants = {
+            pm25: fallback.pm25,
+            pm10: fallback.pm10,
+            o3: fallback.o3,
+            no2: fallback.no2,
+            so2: fallback.so2,
+            co: fallback.co,
+          };
+          finalCoords = fallback.coords;
+          dataSource = "static-data";
+        }
 
-      // Try OpenAQ as secondary fallback
-      const openaqData = await fetchOpenAQData(coords.lat, coords.lng);
-      if (openaqData) {
-        if (openaqData.pm25 != null) pollutants.pm25 = openaqData.pm25;
-        if (openaqData.pm10 != null) pollutants.pm10 = openaqData.pm10;
-        if (openaqData.o3 != null) pollutants.o3 = openaqData.o3;
-        if (openaqData.no2 != null) pollutants.no2 = openaqData.no2;
-        if (openaqData.so2 != null) pollutants.so2 = openaqData.so2;
-        if (openaqData.co != null) pollutants.co = openaqData.co;
-        if (openaqData.coords) finalCoords = openaqData.coords;
+        // Try Open-Meteo as secondary fallback for real-time data
+        try {
+          const openMeteoData = await fetchOpenMeteoData(coordsToUse.lat, coordsToUse.lng);
+          if (openMeteoData) {
+            if (openMeteoData.pm25 != null) pollutants.pm25 = openMeteoData.pm25;
+            if (openMeteoData.pm10 != null) pollutants.pm10 = openMeteoData.pm10;
+            if (openMeteoData.coords) finalCoords = openMeteoData.coords;
+            dataSource = "Open-Meteo";
+            console.log(`Successfully fetched Open-Meteo fallback data for ${locationName}`);
+          }
+        } catch (openMeteoError) {
+          console.log(`Open-Meteo fallback failed:`, openMeteoError.message);
+        }
       }
+    } catch (innerError) {
+      console.log(`Inner processing error:`, innerError.message);
+      fallbackUsed = true;
     }
 
     // Ensure minimum values for PM
     if (pollutants.pm25 == null) pollutants.pm25 = 45;
     if (pollutants.pm10 == null) pollutants.pm10 = 78;
 
-    // Calculate AQI if not provided by AirVisual
+    // Calculate AQI if not provided
     if (aqi === 0) {
       aqi = calculateOverallAQI(pollutants);
     }
@@ -385,34 +522,31 @@ router.post("/", async (req, res) => {
     const advisory = getAdvisory(risk);
     const chartData = generateChartData(pollutants.pm25, pollutants.pm10);
 
-    const payload = {
-      city: normalizedCity,
-      // All pollutants
+    // Build final response
+    responsePayload = {
+      ...responsePayload,
       pm25: Math.round(pollutants.pm25 * 10) / 10,
       pm10: Math.round(pollutants.pm10 * 10) / 10,
       o3: pollutants.o3 != null ? Math.round(pollutants.o3 * 10) / 10 : null,
       no2: pollutants.no2 != null ? Math.round(pollutants.no2 * 10) / 10 : null,
       so2: pollutants.so2 != null ? Math.round(pollutants.so2 * 10) / 10 : null,
       co: pollutants.co != null ? Math.round(pollutants.co * 10) / 10 : null,
-      // AQI info
       aqi,
       aqiCategory: aqiInfo.category,
       aqiColor: aqiInfo.color,
-      // Risk and health
       risk,
       diseases,
       detailedDiseases,
       healthRecommendations,
-      // Location and chart
       coordinates: { lat: finalCoords.lat, lng: finalCoords.lng },
       chartData,
       advisory,
-      disclaimer: "For awareness and prevention only. Not medical diagnosis.",
-      lastUpdated: new Date().toISOString(),
+      source: dataSource,
+      fallbackUsed: fallbackUsed
     };
 
-    req.cityCache?.set(cacheKey, payload);
-    res.json(payload);
+    req.cityCache?.set(cacheKey, responsePayload);
+    res.json(responsePayload);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Temporary service issue." });
