@@ -1,9 +1,9 @@
-// Vercel API route for heatmap data - updated imports
+// Vercel API route for heatmap data
 // This replicates the backend heatmap functionality
 
-import { cityCoordinates } from "../../data/cityCoordinates.js";
-import { cityPollutionData } from "../../data/cityPollutionData.js";
-import { getRiskLevel, calculateOverallAQI } from "../../utils/healthRisk.js";
+import { cityCoordinates } from '../../data/cityCoordinates.js';
+import { cityPollutionData } from '../../data/cityPollutionData.js';
+import { getRiskLevel, calculateOverallAQI } from '../../utils/healthRisk.js';
 
 function getRiskColor(risk) {
   const colors = { High: "#ef4444", Medium: "#eab308", Low: "#22c55e" };
