@@ -1,77 +1,42 @@
-import { Wind, Heart, Activity, Stethoscope, Waves, AlertTriangle } from "lucide-react";
+import { Activity, AlertCircle } from "lucide-react";
 
-const diseases = [
-  {
-    icon: Wind,
-    name: "Asthma",
-    description: "Air pollution triggers asthma attacks by irritating airways and causing inflammation. PM2.5 particles penetrate deep into lungs, worsening respiratory symptoms.",
-    color: "#088395"
-  },
-  {
-    icon: Waves,
-    name: "Bronchitis",
-    description: "Chronic exposure to polluted air inflames bronchial tubes, leading to persistent cough, mucus production, and difficulty breathing.",
-    color: "#088395"
-  },
-  {
-    icon: Activity,
-    name: "COPD",
-    description: "Chronic Obstructive Pulmonary Disease develops from long-term exposure to air pollutants, causing progressive lung damage and breathing difficulties.",
-    color: "#088395"
-  },
-  {
-    icon: Stethoscope,
-    name: "Lung Infections",
-    description: "Polluted air weakens immune defenses in respiratory tract, increasing susceptibility to pneumonia, bronchiolitis, and other lung infections.",
-    color: "#088395"
-  },
-  {
-    icon: Heart,
-    name: "Heart Disease",
-    description: "Fine particles enter bloodstream, causing inflammation and oxidative stress that damages blood vessels and increases risk of heart attacks.",
-    color: "#088395"
-  },
-  {
-    icon: AlertTriangle,
-    name: "Stroke",
-    description: "Air pollution contributes to stroke risk by promoting blood clots, raising blood pressure, and damaging blood vessel walls through chronic inflammation.",
-    color: "#088395"
-  }
-];
+interface DiseaseCardsProps {
+  diseases: string[];
+  risk: string;
+}
 
-export function DiseaseCards() {
+const riskStyles = {
+  High: "border-red-300/50 bg-red-50/50",
+  Medium: "border-amber-300/50 bg-amber-50/50",
+  Low: "border-emerald-300/50 bg-emerald-50/50",
+};
+
+export function DiseaseCards({ diseases, risk }: DiseaseCardsProps) {
+  const style = riskStyles[risk as keyof typeof riskStyles] || riskStyles.Low;
+  const isMinimal = diseases.includes("Minimal impact");
+
   return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-[#09637E] mb-2">Health Impact: SDG-3 Focus</h2>
-        <p className="text-gray-600">Understanding how air pollution affects human health</p>
+    <div className="bg-white/95 backdrop-blur rounded-2xl p-6 shadow-lg border border-[#7AB2B2]/30 hover:shadow-xl transition-shadow duration-300">
+      <div className="flex items-center gap-2 mb-4">
+        <Activity className="h-5 w-5 text-[#09637E]" />
+        <h3 className="text-lg font-semibold text-[#09637E]">Disease Impact</h3>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-        {diseases.map((disease, index) => {
-          const Icon = disease.icon;
-          return (
-            <div
-              key={index}
-              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
-            >
-              <div className="bg-[#7AB2B2] bg-opacity-20 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
-                <Icon className="h-6 w-6 text-[#088395]" />
-              </div>
-              <h3 className="font-semibold text-[#09637E] mb-2">{disease.name}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {disease.description}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-        <p className="text-sm text-amber-900">
-          <span className="font-semibold">Disclaimer:</span> Information provided for awareness and prevention only. 
-          Consult healthcare professionals for medical advice and treatment.
-        </p>
+      <p className="text-sm text-gray-600 mb-4">
+        Conditions that may be affected by current air quality levels
+      </p>
+      <div className="flex flex-wrap gap-3">
+        {diseases.map((disease, i) => (
+          <div
+            key={disease}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border ${style} animate-scale-in opacity-0 [animation-fill-mode:forwards] hover:scale-105 transition-transform duration-200`}
+            style={{ animationDelay: `${i * 0.08}s` }}
+          >
+            {!isMinimal ? (
+              <AlertCircle className="h-4 w-4 text-[#088395]" />
+            ) : null}
+            <span className="font-medium text-gray-800">{disease}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

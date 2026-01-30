@@ -1,150 +1,84 @@
-// Mock data for Indian states, cities, and pollution levels
-
-export interface CityData {
-  name: string;
-  state: string;
-  lat: number;
-  lng: number;
-  pm25: number;
-  pm10: number;
-  aqi: number;
-}
-
-export interface StateInfo {
-  name: string;
-  cities: string[];
-}
-
-export const states: StateInfo[] = [
-  {
-    name: "Delhi",
-    cities: ["New Delhi", "Dwarka", "Rohini", "Shahdara"]
-  },
-  {
-    name: "Maharashtra",
-    cities: ["Mumbai", "Pune", "Nagpur", "Thane"]
-  },
-  {
-    name: "Karnataka",
-    cities: ["Bangalore", "Mysore", "Hubli", "Mangalore"]
-  },
-  {
-    name: "Tamil Nadu",
-    cities: ["Chennai", "Coimbatore", "Madurai", "Salem"]
-  },
-  {
-    name: "West Bengal",
-    cities: ["Kolkata", "Howrah", "Durgapur", "Asansol"]
-  },
-  {
-    name: "Gujarat",
-    cities: ["Ahmedabad", "Surat", "Vadodara", "Rajkot"]
-  },
-  {
-    name: "Uttar Pradesh",
-    cities: ["Lucknow", "Kanpur", "Agra", "Varanasi"]
-  },
-  {
-    name: "Rajasthan",
-    cities: ["Jaipur", "Jodhpur", "Udaipur", "Kota"]
-  },
-  {
-    name: "Punjab",
-    cities: ["Chandigarh", "Ludhiana", "Amritsar", "Jalandhar"]
-  },
-  {
-    name: "Kerala",
-    cities: ["Kochi", "Thiruvananthapuram", "Kozhikode", "Thrissur"]
-  }
+// Indian states and cities - must match Backend supported cities
+export const states = [
+  { name: "Andhra Pradesh", cities: ["Visakhapatnam", "Vijayawada"] },
+  { name: "Assam", cities: ["Guwahati"] },
+  { name: "Bihar", cities: ["Patna"] },
+  { name: "Chhattisgarh", cities: ["Raipur"] },
+  { name: "Delhi", cities: ["Delhi"] },
+  { name: "Goa", cities: [] },
+  { name: "Gujarat", cities: ["Ahmedabad", "Vadodara", "Rajkot", "Surat"] },
+  { name: "Haryana", cities: ["Faridabad", "Gurgaon"] },
+  { name: "Himachal Pradesh", cities: [] },
+  { name: "Jharkhand", cities: ["Ranchi", "Dhanbad"] },
+  { name: "Karnataka", cities: ["Bengaluru", "Mysore", "Mangalore", "Hubli"] },
+  { name: "Kerala", cities: ["Kochi"] },
+  { name: "Madhya Pradesh", cities: ["Bhopal", "Indore", "Jabalpur", "Gwalior"] },
+  { name: "Maharashtra", cities: ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik", "Aurangabad", "Solapur"] },
+  { name: "Odisha", cities: ["Bhubaneswar"] },
+  { name: "Punjab", cities: ["Ludhiana", "Amritsar", "Chandigarh"] },
+  { name: "Rajasthan", cities: ["Jaipur", "Jodhpur", "Kota"] },
+  { name: "Tamil Nadu", cities: ["Chennai", "Coimbatore", "Madurai", "Tiruppur", "Tiruchirappalli"] },
+  { name: "Telangana", cities: ["Hyderabad"] },
+  { name: "Uttar Pradesh", cities: ["Lucknow", "Kanpur", "Agra", "Allahabad", "Meerut", "Varanasi", "Bareilly", "Ghaziabad", "Noida"] },
+  { name: "Uttarakhand", cities: ["Dehradun"] },
+  { name: "West Bengal", cities: ["Kolkata"] },
+  { name: "Jammu and Kashmir", cities: ["Srinagar"] },
 ];
 
-export const citiesData: CityData[] = [
-  // Delhi - High pollution
-  { name: "New Delhi", state: "Delhi", lat: 28.6139, lng: 77.2090, pm25: 178, pm10: 285, aqi: 234 },
-  { name: "Dwarka", state: "Delhi", lat: 28.5921, lng: 77.0460, pm25: 162, pm10: 268, aqi: 218 },
-  { name: "Rohini", state: "Delhi", lat: 28.7495, lng: 77.0634, pm25: 171, pm10: 278, aqi: 227 },
-  { name: "Shahdara", state: "Delhi", lat: 28.6704, lng: 77.2866, pm25: 185, pm10: 291, aqi: 241 },
-  
-  // Maharashtra - Moderate to high
-  { name: "Mumbai", state: "Maharashtra", lat: 19.0760, lng: 72.8777, pm25: 98, pm10: 156, aqi: 142 },
-  { name: "Pune", state: "Maharashtra", lat: 18.5204, lng: 73.8567, pm25: 87, pm10: 142, aqi: 128 },
-  { name: "Nagpur", state: "Maharashtra", lat: 21.1458, lng: 79.0882, pm25: 112, pm10: 178, aqi: 162 },
-  { name: "Thane", state: "Maharashtra", lat: 19.2183, lng: 72.9781, pm25: 92, pm10: 148, aqi: 135 },
-  
-  // Karnataka - Moderate
-  { name: "Bangalore", state: "Karnataka", lat: 12.9716, lng: 77.5946, pm25: 76, pm10: 124, aqi: 112 },
-  { name: "Mysore", state: "Karnataka", lat: 12.2958, lng: 76.6394, pm25: 58, pm10: 95, aqi: 87 },
-  { name: "Hubli", state: "Karnataka", lat: 15.3647, lng: 75.1240, pm25: 68, pm10: 108, aqi: 98 },
-  { name: "Mangalore", state: "Karnataka", lat: 12.9141, lng: 74.8560, pm25: 52, pm10: 84, aqi: 78 },
-  
-  // Tamil Nadu - Moderate
-  { name: "Chennai", state: "Tamil Nadu", lat: 13.0827, lng: 80.2707, pm25: 82, pm10: 132, aqi: 118 },
-  { name: "Coimbatore", state: "Tamil Nadu", lat: 11.0168, lng: 76.9558, pm25: 71, pm10: 115, aqi: 104 },
-  { name: "Madurai", state: "Tamil Nadu", lat: 9.9252, lng: 78.1198, pm25: 78, pm10: 126, aqi: 112 },
-  { name: "Salem", state: "Tamil Nadu", lat: 11.6643, lng: 78.1460, pm25: 73, pm10: 118, aqi: 106 },
-  
-  // West Bengal - High
-  { name: "Kolkata", state: "West Bengal", lat: 22.5726, lng: 88.3639, pm25: 134, pm10: 218, aqi: 186 },
-  { name: "Howrah", state: "West Bengal", lat: 22.5958, lng: 88.2636, pm25: 128, pm10: 208, aqi: 178 },
-  { name: "Durgapur", state: "West Bengal", lat: 23.5204, lng: 87.3119, pm25: 142, pm10: 228, aqi: 195 },
-  { name: "Asansol", state: "West Bengal", lat: 23.6739, lng: 86.9524, pm25: 148, pm10: 236, aqi: 202 },
-  
-  // Gujarat - Moderate to high
-  { name: "Ahmedabad", state: "Gujarat", lat: 23.0225, lng: 72.5714, pm25: 105, pm10: 168, aqi: 152 },
-  { name: "Surat", state: "Gujarat", lat: 21.1702, lng: 72.8311, pm25: 94, pm10: 152, aqi: 138 },
-  { name: "Vadodara", state: "Gujarat", lat: 22.3072, lng: 73.1812, pm25: 98, pm10: 158, aqi: 143 },
-  { name: "Rajkot", state: "Gujarat", lat: 22.3039, lng: 70.8022, pm25: 89, pm10: 144, aqi: 131 },
-  
-  // Uttar Pradesh - Very high
-  { name: "Lucknow", state: "Uttar Pradesh", lat: 26.8467, lng: 80.9462, pm25: 156, pm10: 252, aqi: 212 },
-  { name: "Kanpur", state: "Uttar Pradesh", lat: 26.4499, lng: 80.3319, pm25: 192, pm10: 305, aqi: 248 },
-  { name: "Agra", state: "Uttar Pradesh", lat: 27.1767, lng: 78.0081, pm25: 167, pm10: 268, aqi: 223 },
-  { name: "Varanasi", state: "Uttar Pradesh", lat: 25.3176, lng: 82.9739, pm25: 174, pm10: 278, aqi: 231 },
-  
-  // Rajasthan - High
-  { name: "Jaipur", state: "Rajasthan", lat: 26.9124, lng: 75.7873, pm25: 118, pm10: 192, aqi: 168 },
-  { name: "Jodhpur", state: "Rajasthan", lat: 26.2389, lng: 73.0243, pm25: 112, pm10: 182, aqi: 162 },
-  { name: "Udaipur", state: "Rajasthan", lat: 24.5854, lng: 73.7125, pm25: 95, pm10: 154, aqi: 139 },
-  { name: "Kota", state: "Rajasthan", lat: 25.2138, lng: 75.8648, pm25: 108, pm10: 175, aqi: 157 },
-  
-  // Punjab - High
-  { name: "Chandigarh", state: "Punjab", lat: 30.7333, lng: 76.7794, pm25: 125, pm10: 202, aqi: 174 },
-  { name: "Ludhiana", state: "Punjab", lat: 30.9010, lng: 75.8573, pm25: 138, pm10: 224, aqi: 189 },
-  { name: "Amritsar", state: "Punjab", lat: 31.6340, lng: 74.8723, pm25: 132, pm10: 215, aqi: 183 },
-  { name: "Jalandhar", state: "Punjab", lat: 31.3260, lng: 75.5762, pm25: 129, pm10: 209, aqi: 179 },
-  
-  // Kerala - Good to moderate
-  { name: "Kochi", state: "Kerala", lat: 9.9312, lng: 76.2673, pm25: 42, pm10: 68, aqi: 62 },
-  { name: "Thiruvananthapuram", state: "Kerala", lat: 8.5241, lng: 76.9366, pm25: 38, pm10: 62, aqi: 56 },
-  { name: "Kozhikode", state: "Kerala", lat: 11.2588, lng: 75.7804, pm25: 45, pm10: 72, aqi: 66 },
-  { name: "Thrissur", state: "Kerala", lat: 10.5276, lng: 76.2144, pm25: 41, pm10: 66, aqi: 60 }
+export const citiesData = [
+  { name: "Delhi", state: "Delhi", lat: 28.6139, lng: 77.209 },
+  { name: "Mumbai", state: "Maharashtra", lat: 19.076, lng: 72.8777 },
+  { name: "Kolkata", state: "West Bengal", lat: 22.5726, lng: 88.3639 },
+  { name: "Chennai", state: "Tamil Nadu", lat: 13.0827, lng: 80.2707 },
+  { name: "Bengaluru", state: "Karnataka", lat: 12.9716, lng: 77.5946 },
+  { name: "Hyderabad", state: "Telangana", lat: 17.385, lng: 78.4867 },
+  { name: "Pune", state: "Maharashtra", lat: 18.5204, lng: 73.8567 },
+  { name: "Ahmedabad", state: "Gujarat", lat: 23.0225, lng: 72.5714 },
+  { name: "Jaipur", state: "Rajasthan", lat: 26.9124, lng: 75.7873 },
+  { name: "Lucknow", state: "Uttar Pradesh", lat: 26.8467, lng: 80.9462 },
+  { name: "Kanpur", state: "Uttar Pradesh", lat: 26.4499, lng: 80.3319 },
+  { name: "Nagpur", state: "Maharashtra", lat: 21.1458, lng: 79.0882 },
+  { name: "Indore", state: "Madhya Pradesh", lat: 22.7196, lng: 75.8577 },
+  { name: "Thane", state: "Maharashtra", lat: 19.2183, lng: 72.9781 },
+  { name: "Bhopal", state: "Madhya Pradesh", lat: 23.2599, lng: 77.4126 },
+  { name: "Visakhapatnam", state: "Andhra Pradesh", lat: 17.6868, lng: 83.2185 },
+  { name: "Patna", state: "Bihar", lat: 25.5941, lng: 85.1376 },
+  { name: "Vadodara", state: "Gujarat", lat: 22.3072, lng: 73.1812 },
+  { name: "Ghaziabad", state: "Uttar Pradesh", lat: 28.6692, lng: 77.4538 },
+  { name: "Ludhiana", state: "Punjab", lat: 30.901, lng: 75.8573 },
+  { name: "Agra", state: "Uttar Pradesh", lat: 27.1767, lng: 78.0081 },
+  { name: "Nashik", state: "Maharashtra", lat: 19.9975, lng: 73.7898 },
+  { name: "Faridabad", state: "Haryana", lat: 28.4089, lng: 77.3178 },
+  { name: "Meerut", state: "Uttar Pradesh", lat: 28.9845, lng: 77.7064 },
+  { name: "Rajkot", state: "Gujarat", lat: 22.3039, lng: 70.8022 },
+  { name: "Varanasi", state: "Uttar Pradesh", lat: 25.3176, lng: 82.9739 },
+  { name: "Srinagar", state: "Jammu and Kashmir", lat: 34.0837, lng: 74.7973 },
+  { name: "Aurangabad", state: "Maharashtra", lat: 19.8762, lng: 75.3433 },
+  { name: "Dhanbad", state: "Jharkhand", lat: 23.7957, lng: 86.4304 },
+  { name: "Amritsar", state: "Punjab", lat: 31.634, lng: 74.8723 },
+  { name: "Allahabad", state: "Uttar Pradesh", lat: 25.4358, lng: 81.8463 },
+  { name: "Ranchi", state: "Jharkhand", lat: 23.3441, lng: 85.3096 },
+  { name: "Coimbatore", state: "Tamil Nadu", lat: 11.0168, lng: 76.9558 },
+  { name: "Jabalpur", state: "Madhya Pradesh", lat: 23.1815, lng: 79.9864 },
+  { name: "Gwalior", state: "Madhya Pradesh", lat: 26.2183, lng: 78.1828 },
+  { name: "Vijayawada", state: "Andhra Pradesh", lat: 16.5062, lng: 80.648 },
+  { name: "Jodhpur", state: "Rajasthan", lat: 26.2389, lng: 73.0243 },
+  { name: "Madurai", state: "Tamil Nadu", lat: 9.9252, lng: 78.1198 },
+  { name: "Raipur", state: "Chhattisgarh", lat: 21.2514, lng: 81.6296 },
+  { name: "Kota", state: "Rajasthan", lat: 25.2138, lng: 75.8648 },
+  { name: "Chandigarh", state: "Punjab", lat: 30.7333, lng: 76.7794 },
+  { name: "Guwahati", state: "Assam", lat: 26.1445, lng: 91.7362 },
+  { name: "Solapur", state: "Maharashtra", lat: 17.6599, lng: 75.9064 },
+  { name: "Hubli", state: "Karnataka", lat: 15.3647, lng: 75.124 },
+  { name: "Tiruchirappalli", state: "Tamil Nadu", lat: 10.7905, lng: 78.7047 },
+  { name: "Bareilly", state: "Uttar Pradesh", lat: 28.367, lng: 79.4304 },
+  { name: "Mysore", state: "Karnataka", lat: 12.2958, lng: 76.6394 },
+  { name: "Tiruppur", state: "Tamil Nadu", lat: 11.1085, lng: 77.3411 },
+  { name: "Gurgaon", state: "Haryana", lat: 28.4595, lng: 77.0266 },
+  { name: "Noida", state: "Uttar Pradesh", lat: 28.5355, lng: 77.391 },
+  { name: "Kochi", state: "Kerala", lat: 9.9312, lng: 76.2673 },
+  { name: "Mangalore", state: "Karnataka", lat: 12.9141, lng: 74.856 },
+  { name: "Dehradun", state: "Uttarakhand", lat: 30.3165, lng: 78.0322 },
+  { name: "Bhubaneswar", state: "Odisha", lat: 20.2961, lng: 85.8245 },
+  { name: "Surat", state: "Gujarat", lat: 21.1702, lng: 72.8311 },
 ];
-
-export const getHealthRisk = (pm25: number): { level: string; color: string; bgColor: string } => {
-  if (pm25 <= 50) return { level: "Good", color: "#10b981", bgColor: "#d1fae5" };
-  if (pm25 <= 100) return { level: "Moderate", color: "#f59e0b", bgColor: "#fef3c7" };
-  if (pm25 <= 150) return { level: "Unhealthy for Sensitive", color: "#f97316", bgColor: "#ffedd5" };
-  if (pm25 <= 200) return { level: "Unhealthy", color: "#ef4444", bgColor: "#fee2e2" };
-  if (pm25 <= 300) return { level: "Very Unhealthy", color: "#dc2626", bgColor: "#fecaca" };
-  return { level: "Hazardous", color: "#991b1b", bgColor: "#fca5a5" };
-};
-
-export const getCityData = (cityName: string): CityData | undefined => {
-  return citiesData.find(c => c.name === cityName);
-};
-
-// Generate PM2.5 trend data for charts
-export const generateTrendData = (basePM25: number) => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return months.map((month, index) => {
-    // Simulate seasonal variation - higher in winter months (Oct-Feb)
-    const seasonalFactor = [1.4, 1.5, 1.2, 0.9, 0.8, 0.7, 0.75, 0.8, 0.85, 1.1, 1.3, 1.45];
-    const pm25 = Math.round(basePM25 * seasonalFactor[index]);
-    const pm10 = Math.round(pm25 * 1.6);
-    return {
-      month,
-      pm25,
-      pm10
-    };
-  });
-};
