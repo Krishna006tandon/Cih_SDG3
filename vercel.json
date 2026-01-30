@@ -16,14 +16,22 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "source": "/api/city",
+      "destination": "/api/city.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/api/heatmap",
+      "destination": "/api/heatmap/index.js"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health/index.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/Frontend/dist/index.html"
     }
   ]
 }
