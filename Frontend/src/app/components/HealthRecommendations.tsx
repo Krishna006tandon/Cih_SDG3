@@ -103,3 +103,4 @@ export function HealthRecommendations({ aqi, aqiCategory, recommendations }: Hea
     </div>
   );
 }
+export default HealthRecommendations;

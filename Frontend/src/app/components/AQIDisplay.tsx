@@ -5,6 +5,9 @@ interface AQIDisplayProps {
   aqiCategory: string;
   aqiColor: string;
   city: string;
+  area?: string;
+  source?: string;
+  fallbackUsed?: boolean;
 }
 
 const aqiRanges = [
@@ -22,7 +25,7 @@ function getAQIPercentage(aqi: number | null): number {
   return Math.min((aqi / 500) * 100, 100);
 }
 
-export function AQIDisplay({ aqi, aqiCategory, aqiColor, city }: AQIDisplayProps) {
+export function AQIDisplay({ aqi, aqiCategory, aqiColor, city, area, source, fallbackUsed }: AQIDisplayProps) {
   const percentage = getAQIPercentage(aqi);
 
   return (
@@ -42,7 +45,14 @@ export function AQIDisplay({ aqi, aqiCategory, aqiColor, city }: AQIDisplayProps
             {aqi ?? "N/A"}
           </div>
           
-          <div className="text-sm text-gray-500 mb-2">(AQI-IN)</div>
+          <div className="text-sm text-gray-500 mb-2">(AQI-IN)
+            {source && (
+              <span className="ml-2 text-xs bg-gray-100 px-2 py-1 rounded-full">
+                Source: {source.replace('IQAir-', '').replace('-', ' ')}
+                {fallbackUsed && ' ⚠️'}
+              </span>
+            )}
+          </div>
           
           <div className="flex items-center gap-2">
             <span className="text-gray-600">Air Quality is</span>
@@ -113,3 +123,4 @@ export function AQIDisplay({ aqi, aqiCategory, aqiColor, city }: AQIDisplayProps
     </div>
   );
 }
+export default AQIDisplay;

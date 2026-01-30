@@ -5,8 +5,16 @@
   --color-secondary: #088395;
   --color-accent: #7AB2B2;
   --color-bg: #EBF4F6;
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+  --color-info: #0ea5e9;
 }
 
+/* Government Dashboard Typography */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Core Animations */
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -68,6 +76,49 @@
   to { opacity: 1; transform: translateX(0); }
 }
 
+@keyframes pulse-ring {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+@keyframes pulse-core {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px var(--pulse-color), 0 0 40px var(--pulse-color); }
+  50% { transform: scale(1.2); box-shadow: 0 0 30px var(--pulse-color), 0 0 60px var(--pulse-color); }
+}
+
+/* Chatbot Specific Animations */
+@keyframes chat-pop-in {
+  0% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes chat-pop-out {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(20px);
+    opacity: 0;
+  }
+}
+
+@keyframes chat-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+/* Animation Classes */
 .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
 .animate-slide-up { animation: slide-up 0.6s ease-out forwards; }
 .animate-scale-in { animation: scale-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
@@ -78,16 +129,27 @@
 .animate-bar-grow { animation: bar-grow 0.6s ease-out forwards; }
 .animate-risk-pulse { animation: risk-pulse 2s ease-in-out infinite; }
 .animate-slide-in-right { animation: slide-in-right 0.5s ease-out forwards; }
+.animate-pulse-ring { animation: pulse-ring 2s ease-out infinite; }
+.animate-pulse-core { animation: pulse-core 2s ease-in-out infinite; }
+.animate-chat-pop-in { animation: chat-pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+.animate-chat-pop-out { animation: chat-pop-out 0.2s ease forwards; }
+.animate-chat-float { animation: chat-float 3s ease-in-out infinite; }
 
+/* Staggered Animations */
 .animate-stagger-1 { animation-delay: 0.1s; }
 .animate-stagger-2 { animation-delay: 0.2s; }
 .animate-stagger-3 { animation-delay: 0.3s; }
 .animate-stagger-4 { animation-delay: 0.4s; }
 .animate-stagger-5 { animation-delay: 0.5s; }
 
-* { box-sizing: border-box; }
+/* Global Styles */
+* { 
+  box-sizing: border-box; 
+}
 
-html { scroll-behavior: smooth; }
+html { 
+  scroll-behavior: smooth; 
+}
 
 body {
   margin: 0;
@@ -95,4 +157,128 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: #EBF4F6;
+  color: #1e293b;
+  line-height: 1.6;
+}
+
+/* Government Dashboard Card Styles */
+.dashboard-card {
+  @apply bg-white/95 backdrop-blur rounded-2xl shadow-lg border border-[#7AB2B2]/20;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover {
+  @apply shadow-xl border-[#7AB2B2]/30;
+  transform: translateY(-2px);
+}
+
+/* Data Visualization Cards */
+.data-card {
+  @apply bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 shadow-md border border-gray-100;
+  transition: all 0.2s ease-in-out;
+}
+
+data-card:hover {
+  @apply shadow-lg border-gray-200;
+}
+
+/* Metric Display */
+.metric-value {
+  @apply text-3xl font-bold tabular-nums;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  @apply text-sm font-medium text-gray-600 uppercase tracking-wide;
+}
+
+/* Status Indicators */
+.status-indicator {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold;
+}
+
+.status-good { @apply bg-green-100 text-green-800; }
+.status-moderate { @apply bg-yellow-100 text-yellow-800; }
+.status-poor { @apply bg-orange-100 text-orange-800; }
+.status-severe { @apply bg-red-100 text-red-800; }
+
+/* Government Color Palette */
+.bg-sdg-primary { background: linear-gradient(135deg, #09637E 0%, #088395 100%); }
+.bg-sdg-secondary { background: linear-gradient(135deg, #7AB2B2 0%, #4d9d9d 100%); }
+.text-sdg-primary { color: #09637E; }
+.text-sdg-secondary { color: #088395; }
+.border-sdg { border-color: #7AB2B2; }
+
+/* Health Risk Visualization */
+.risk-high { 
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); 
+  border-left: 4px solid #ef4444;
+}
+
+.risk-medium { 
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); 
+  border-left: 4px solid #eab308;
+}
+
+.risk-low { 
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); 
+  border-left: 4px solid #22c55e;
+}
+
+/* AQI Color Scale */
+.aqi-good { color: #22c55e; }
+.aqi-satisfactory { color: #84cc16; }
+.aqi-moderate { color: #eab308; }
+.aqi-poor { color: #f97316; }
+.aqi-very-poor { color: #ef4444; }
+.aqi-severe { color: #991b1b; }
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Focus Styles for Accessibility */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-[#088395] focus:ring-offset-2;
+}
+
+/* Responsive Utilities */
+@media (max-width: 640px) {
+  .dashboard-card {
+    @apply rounded-xl;
+  }
+  
+  .metric-value {
+    @apply text-2xl;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .dashboard-card {
+    box-shadow: none;
+    border: 1px solid #d1d5db;
+  }
 }

@@ -43,7 +43,9 @@ class AirVisualClient {
       });
 
       if (response.data.status === 'success') {
+        console.log(`Raw AirVisual API response for ${city}, ${state}:`, JSON.stringify(response.data.data, null, 2));
         const data = this.transformCityData(response.data.data);
+        console.log(`Transformed data for ${city}, ${state}:`, JSON.stringify(data, null, 2));
         // Cache the result
         this.cache.set(cacheKey, {
           data: data,
@@ -147,6 +149,106 @@ class AirVisualClient {
       await new Promise(resolve => setTimeout(resolve, this.requestDelay - timeSinceLastRequest));
     }
     this.lastRequestTime = Date.now();
+  }
+
+  // Get nearest station data by coordinates (area-level)
+  async getNearestStation(lat, lon) {
+    await this.waitForRateLimit();
+    
+    const cacheKey = `station_${lat}_${lon}`;
+    
+    if (this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        return cached.data;
+      }
+      this.cache.delete(cacheKey);
+    }
+
+    try {
+      const response = await axios.get(`${this.baseUrl}/nearest_station`, {
+        params: {
+          lat: lat,
+          lon: lon,
+          key: this.apiKey
+        },
+        timeout: 10000
+      });
+
+      if (response.data.status === 'success') {
+        const data = this.transformStationData(response.data.data);
+        this.cache.set(cacheKey, {
+          data: data,
+          timestamp: Date.now()
+        });
+        return data;
+      } else {
+        throw new Error(`API Error: ${response.data.data || response.data.message}`);
+      }
+    } catch (error) {
+      console.error('AirVisual Nearest Station API Error:', error.message);
+      throw error;
+    }
+  }
+
+  // Transform AirVisual nearest station response to our format
+  transformStationData(apiData) {
+    const current = apiData.current;
+    if (!current || !current.pollution) {
+      throw new Error('Invalid API response: missing pollution data');
+    }
+
+    const pollution = current.pollution;
+    const weather = current.weather || {};
+
+    // Map main pollutants
+    const mainPollutant = this.mapMainPollutant(pollution.mainus);
+    
+    return {
+      station: apiData.station,
+      city: apiData.city,
+      state: apiData.state,
+      country: apiData.country,
+      coordinates: [apiData.location.coordinates.lon, apiData.location.coordinates.lat], // [lng, lat]
+      aqi: pollution.aqius || 0,
+      mainPollutant: mainPollutant,
+      pollutants: {
+        pm25: pollution.p2 ? {
+          concentration: pollution.p2.conc,
+          aqi: pollution.p2.aqius
+        } : { concentration: 0, aqi: 0 },
+        pm10: pollution.p1 ? {
+          concentration: pollution.p1.conc,
+          aqi: pollution.p1.aqius
+        } : { concentration: 0, aqi: 0 },
+        o3: pollution.o3 ? {
+          concentration: pollution.o3.conc,
+          aqi: pollution.o3.aqius
+        } : { concentration: 0, aqi: 0 },
+        no2: pollution.n2 ? {
+          concentration: pollution.n2.conc,
+          aqi: pollution.n2.aqius
+        } : { concentration: 0, aqi: 0 },
+        so2: pollution.s2 ? {
+          concentration: pollution.s2.conc,
+          aqi: pollution.s2.aqius
+        } : { concentration: 0, aqi: 0 },
+        co: pollution.co ? {
+          concentration: pollution.co.conc,
+          aqi: pollution.co.aqius
+        } : { concentration: 0, aqi: 0 }
+      },
+      weather: {
+        temperature: weather.tp || 0,
+        humidity: weather.hu || 0,
+        pressure: weather.pr || 0,
+        windSpeed: weather.ws || 0,
+        windDirection: weather.wd || 0,
+        heatIndex: weather.heatIndex || 0
+      },
+      timestamp: new Date(pollution.ts || Date.now()).toISOString(),
+      source: 'IQAir-nearest-station'
+    };
   }
 
   // Get nearest city data by coordinates
