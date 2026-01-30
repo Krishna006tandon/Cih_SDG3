@@ -1,7 +1,7 @@
 {
   "version": 2,
   "buildCommand": "cd Frontend && npm install && npm run build",
-  "outputDirectory": "public"
+  "outputDirectory": "public",
 
   "builds": [
     {
@@ -26,15 +26,15 @@
     },
     {
       "source": "/api/heatmap",
-      "destination": "/api/heatmap/index.js"
+      "destination": "/api/heatmap"
     },
     {
       "source": "/api/health",
-      "destination": "/api/health/index.js"
+      "destination": "/api/health"
     },
     {
       "source": "/(.*)",
-      "destination": "/Frontend/dist/index.html"
+      "destination": "/public/index.html"
     }
   ]
 }
