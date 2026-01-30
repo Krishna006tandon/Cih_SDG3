@@ -16,12 +16,31 @@ cd Frontend && npm install
 
 ### 2. Configure environment
 
-Create `.env` in the project root (or copy from `.env.example`):
+#### Backend Configuration
+Create `Backend/.env` (copy from `Backend/.env.example`):
 
 ```
+# Server configuration
 PORT=5000
 NODE_ENV=development
-OPENAQ_API_KEY=your_openaq_api_key
+
+# AirVisual API Key (Required for real-time data)
+# Get your free API key from: https://www.airvisual.com/api
+AIRVISUAL_API_KEY=your-airvisual-api-key-here
+AIRVISUAL_API_URL=https://api.airvisual.com/v2
+
+# OpenAQ API Key (Optional, for backup data)
+# Get your API key from: https://explore.openaq.org
+OPENAQ_API_KEY=your-openaq-api-key-here
+```
+
+> **Note**: The application will work with static fallback data even without API keys, but real-time data requires valid API keys.
+
+#### Frontend Configuration
+Create `Frontend/.env` (copy from `Frontend/.env.example`):
+
+```
+VITE_API_BASE_URL=http://localhost:5000
 ```
 
 ### 3. Run the app
