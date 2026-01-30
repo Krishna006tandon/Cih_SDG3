@@ -1,8 +1,10 @@
 {
   "name": "cih-sdg3",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "build": "echo \"Nothing to build yet\"",
-    "vercel-build": "echo \"Vercel build placeholder\""
+    "build": "cd Frontend && npm run build",
+    "dev": "cd Frontend && npm run dev",
+    "vercel-build": "cd Frontend && npm run build"
   }
 }
