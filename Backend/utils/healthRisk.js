@@ -126,10 +126,21 @@ export function getAQICategory(aqi) {
 }
 
 /**
- * Health risk calculation based on PM2.5 (SDG-3 core)
+ * Health risk calculation based on PM2.5 or AQI (SDG-3 core)
  * PM2.5 > 60 = High, 30-60 = Medium, < 30 = Low
+ * AQI > 100 = High, 50-100 = Medium, < 50 = Low
  */
-export function getRiskLevel(pm25) {
+export function getRiskLevel(pm25, aqi) {
+  // If AQI is provided, use it for risk calculation
+  if (aqi != null) {
+    const aqiVal = Number(aqi);
+    if (isNaN(aqiVal) || aqiVal < 0) return "Low";
+    if (aqiVal > 100) return "High";
+    if (aqiVal >= 50) return "Medium";
+    return "Low";
+  }
+  
+  // Fallback to PM2.5 if AQI not available
   const val = Number(pm25);
   if (isNaN(val) || val < 0) return "Low";
   if (val > 60) return "High";

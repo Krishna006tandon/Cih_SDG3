@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { cityCoordinates } from "../data/cityCoordinates.js";
 import { cityPollutionData } from "../data/cityPollutionData.js";
+import airVisualClient from "../utils/airVisualClient.js";
 import {
   getRiskLevel,
   getDiseasesByRisk,
@@ -201,40 +202,94 @@ router.post("/", async (req, res) => {
       co: null,
     };
     let finalCoords = coords;
+    let aqi = 0;
+    let mainPollutant = "Unknown";
+    let weather = {};
 
-    // Use static data first for stability
-    const fallback = getStaticFallback(cityKey);
-    if (fallback) {
-      pollutants = {
-        pm25: fallback.pm25,
-        pm10: fallback.pm10,
-        o3: fallback.o3,
-        no2: fallback.no2,
-        so2: fallback.so2,
-        co: fallback.co,
-      };
-      finalCoords = fallback.coords;
-    }
+    try {
+      // Add small delay to respect rate limits
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Try AirVisual API first for real-time data
+      // Use appropriate state names for major cities
+      let state = "Maharashtra";
+      if (cityKey === "Delhi" || cityKey === "Gurgaon" || cityKey === "Noida" || cityKey === "Ghaziabad") {
+        state = "Delhi";
+      } else if (cityKey === "Kolkata") {
+        state = "West Bengal";
+      } else if (cityKey === "Chennai") {
+        state = "Tamil Nadu";
+      } else if (cityKey === "Bengaluru") {
+        state = "Karnataka";
+      } else if (cityKey === "Hyderabad") {
+        state = "Telangana";
+      } else if (cityKey === "Pune") {
+        state = "Maharashtra";
+      } else if (cityKey === "Ahmedabad") {
+        state = "Gujarat";
+      } else if (cityKey === "Jaipur") {
+        state = "Rajasthan";
+      }
+      
+      const airVisualData = await airVisualClient.getCityData(cityKey, state);
+      
+      if (airVisualData) {
+        pollutants = {
+          pm25: airVisualData.pollutants.pm25?.concentration || 0,
+          pm10: airVisualData.pollutants.pm10?.concentration || 0,
+          o3: airVisualData.pollutants.o3?.concentration || 0,
+          no2: airVisualData.pollutants.no2?.concentration || 0,
+          so2: airVisualData.pollutants.so2?.concentration || 0,
+          co: airVisualData.pollutants.co?.concentration || 0,
+        };
+        aqi = airVisualData.aqi;
+        mainPollutant = airVisualData.mainPollutant;
+        finalCoords = {
+          lat: airVisualData.coordinates[1],
+          lng: airVisualData.coordinates[0]
+        };
+        weather = airVisualData.weather;
+      }
+    } catch (error) {
+      console.log(`AirVisual API failed for ${cityKey}, falling back to static data:`, error.message);
+      
+      // Fallback to static data
+      const fallback = getStaticFallback(cityKey);
+      if (fallback) {
+        pollutants = {
+          pm25: fallback.pm25,
+          pm10: fallback.pm10,
+          o3: fallback.o3,
+          no2: fallback.no2,
+          so2: fallback.so2,
+          co: fallback.co,
+        };
+        finalCoords = fallback.coords;
+      }
 
-    // Try OpenAQ for real-time data (fallback to static if API fails)
-    const openaqData = await fetchOpenAQData(coords.lat, coords.lng);
-    if (openaqData) {
-      // Update with any available real-time data
-      if (openaqData.pm25 != null) pollutants.pm25 = openaqData.pm25;
-      if (openaqData.pm10 != null) pollutants.pm10 = openaqData.pm10;
-      if (openaqData.o3 != null) pollutants.o3 = openaqData.o3;
-      if (openaqData.no2 != null) pollutants.no2 = openaqData.no2;
-      if (openaqData.so2 != null) pollutants.so2 = openaqData.so2;
-      if (openaqData.co != null) pollutants.co = openaqData.co;
-      if (openaqData.coords) finalCoords = openaqData.coords;
+      // Try OpenAQ as secondary fallback
+      const openaqData = await fetchOpenAQData(coords.lat, coords.lng);
+      if (openaqData) {
+        if (openaqData.pm25 != null) pollutants.pm25 = openaqData.pm25;
+        if (openaqData.pm10 != null) pollutants.pm10 = openaqData.pm10;
+        if (openaqData.o3 != null) pollutants.o3 = openaqData.o3;
+        if (openaqData.no2 != null) pollutants.no2 = openaqData.no2;
+        if (openaqData.so2 != null) pollutants.so2 = openaqData.so2;
+        if (openaqData.co != null) pollutants.co = openaqData.co;
+        if (openaqData.coords) finalCoords = openaqData.coords;
+      }
     }
 
     // Ensure minimum values for PM
     if (pollutants.pm25 == null) pollutants.pm25 = 45;
     if (pollutants.pm10 == null) pollutants.pm10 = 78;
 
-    // Calculate AQI
-    const aqi = calculateOverallAQI(pollutants);
+    // Calculate AQI if not provided by AirVisual
+    if (aqi === 0) {
+      aqi = calculateOverallAQI(pollutants);
+    }
+
+    // Calculate AQI info
     const aqiInfo = getAQICategory(aqi);
     const risk = getRiskFromAQI(aqi);
     const diseases = getDiseasesByRisk(risk);

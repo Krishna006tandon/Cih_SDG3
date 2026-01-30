@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { cityCoordinates } from "../data/cityCoordinates.js";
 import { cityPollutionData } from "../data/cityPollutionData.js";
-import { getRiskLevel } from "../utils/healthRisk.js";
+import airVisualClient from "../utils/airVisualClient.js";
+import { getRiskLevel, calculateOverallAQI } from "../utils/healthRisk.js";
 
 const router = Router();
 
@@ -18,15 +19,26 @@ router.get("/", async (req, res) => {
       return res.json(cached);
     }
 
+    // Use static data for heatmap to avoid rate limiting
     const points = Object.entries(cityCoordinates).map(([name, coords]) => {
       const pollution = cityPollutionData[name];
       const pm25 = pollution ? pollution.pm25 : 45;
-      const risk = getRiskLevel(pm25);
+      const pollutants = {
+        pm25: pm25,
+        pm10: pollution?.pm10 || 78,
+        o3: pollution?.o3 || 30,
+        no2: pollution?.no2 || 25,
+        so2: pollution?.so2 || 10,
+        co: pollution?.co || 400
+      };
+      const aqi = calculateOverallAQI(pollutants);
+      const risk = getRiskLevel(pm25, aqi);
       return {
         city: name,
         lat: coords.lat,
         lng: coords.lng,
         pm25,
+        aqi,
         risk,
         color: getRiskColor(risk),
       };
