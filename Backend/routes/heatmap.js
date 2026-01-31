@@ -47,8 +47,51 @@ function getRespiratoryRiskDetails(risk) {
   return details[risk] || details.Low;
 }
 
-// Helper to generate point data
-function generatePointData(name, coords) {
+// Helper to generate point data with real AQI fetching
+async function generatePointData(name, coords) {
+  try {
+    // Try to get real data from AirVisual API
+    const cityData = await airVisualClient.getNearestCity(coords.lat, coords.lng);
+    
+    if (cityData && cityData.aqi !== undefined) {
+      // Use real AQI data
+      const pm25 = cityData.pollutants.pm25?.concentration || 45;
+      const pm10 = cityData.pollutants.pm10?.concentration || Math.round(pm25 * 1.7);
+      const pollutants = {
+        pm25: pm25,
+        pm10: pm10,
+        o3: cityData.pollutants.o3?.concentration || 30,
+        no2: cityData.pollutants.no2?.concentration || 25,
+        so2: cityData.pollutants.so2?.concentration || 10,
+        co: cityData.pollutants.co?.concentration || 400
+      };
+      
+      const aqi = cityData.aqi;
+      const aqiInfo = getAQICategory(aqi);
+      const risk = getRiskLevel(pm25, aqi);
+      const respiratoryRisk = getRespiratoryRiskDetails(risk);
+      
+      return {
+        city: name,
+        lat: coords.lat,
+        lng: coords.lng,
+        pm25,
+        pm10,
+        aqi,
+        aqiCategory: aqiInfo.category,
+        risk,
+        color: getRiskColor(risk),
+        respiratoryRisk,
+        pollutants,
+        timestamp: new Date().toISOString(),
+        source: 'real-time'
+      };
+    }
+  } catch (error) {
+    console.log(`Failed to fetch real data for ${name}, falling back to static data`);
+  }
+  
+  // Fallback to static data
   const pollution = cityPollutionData[name];
   const pm25 = pollution ? pollution.pm25 : 45;
   const pm10 = pollution?.pm10 || Math.round(pm25 * 1.7);
@@ -77,7 +120,8 @@ function generatePointData(name, coords) {
     color: getRiskColor(risk),
     respiratoryRisk,
     pollutants,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    source: 'static'
   };
 }
 
@@ -114,7 +158,11 @@ router.get("/", async (req, res) => {
       }
     }
 
-    const points = cities.map(([name, coords]) => generatePointData(name, coords));
+    const points = [];
+    for (const [name, coords] of cities) {
+      const pointData = await generatePointData(name, coords);
+      points.push(pointData);
+    }
 
     const payload = {
       success: true,
