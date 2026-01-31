@@ -15,6 +15,10 @@
       "dest": "/api/health"
     },
     {
+      "src": "/api/gemini/chat",
+      "dest": "/api/gemini/chat"
+    },
+    {
       "src": "/(.*)",
       "dest": "/Frontend/dist/index.html"
     }
