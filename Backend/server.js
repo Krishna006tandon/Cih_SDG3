@@ -8,7 +8,7 @@ import { cityDataRouter } from "./routes/cityData.js";
 import { heatmapRouter } from "./routes/heatmap.js";
 import { healthRiskRouter } from "./routes/healthRisk.js";
 import { geminiRouter } from "./routes/gemini.js";
-import { exportRouter } from "./routes/export.js";
+import { exportRouter } from "./routes/export-simple.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, "../.env") });

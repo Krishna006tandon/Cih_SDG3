@@ -15,6 +15,9 @@ import {
 } from "../utils/healthRisk.js";
 import { getAdvisory } from "../utils/advisory.js";
 
+// Import the city data route handler to reuse its logic
+import { cityDataRouter } from "./cityData.js";
+
 const router = Router();
 
 // Helper function to generate CSV data
@@ -151,22 +154,51 @@ router.get("/city", async (req, res) => {
       return res.status(400).json({ error: "City and state are required" });
     }
     
-    // Fetch city data (similar to cityData route)
-    const requestBody = { state, city };
-    if (area) requestBody.area = area;
+    // Create a mock request/response to reuse city data logic
+    const mockReq = {
+      body: { state, city, area },
+      cityCache: null // No caching for export
+    };
     
-    const response = await fetch("http://localhost:5000/api/city", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody)
+    let data = null;
+    let errorResponse = null;
+    
+    // Mock response object
+    const mockRes = {
+      status: function(code) {
+        if (code >= 400) {
+          errorResponse = { status: code };
+        }
+        return this;
+      },
+      json: function(jsonData) {
+        if (errorResponse) {
+          errorResponse.data = jsonData;
+        } else {
+          data = jsonData;
+        }
+        return this;
+      }
+    };
+    
+    // Call the city data route handler directly
+    await new Promise((resolve) => {
+      // Wrap in try/catch to handle async errors
+      try {
+        cityDataRouter.handle(mockReq, mockRes, resolve);
+      } catch (err) {
+        errorResponse = { status: 500, data: { error: "Failed to fetch city data" } };
+        resolve();
+      }
     });
     
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return res.status(400).json({ error: err.error || "City not supported" });
+    if (errorResponse) {
+      return res.status(errorResponse.status).json(errorResponse.data);
     }
     
-    const data = await response.json();
+    if (!data) {
+      return res.status(500).json({ error: "Failed to fetch city data" });
+    }
     
     // Generate appropriate response based on format
     if (format === "json") {
