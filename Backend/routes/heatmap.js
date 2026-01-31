@@ -88,41 +88,9 @@ async function generatePointData(name, coords) {
       };
     }
   } catch (error) {
-    console.log(`Failed to fetch real data for ${name}, falling back to static data`);
+    console.log(`Failed to fetch real data for ${name}, skipping this city`);
+    return null; // Skip cities where real data is not available
   }
-  
-  // Fallback to static data
-  const pollution = cityPollutionData[name];
-  const pm25 = pollution ? pollution.pm25 : 45;
-  const pm10 = pollution?.pm10 || Math.round(pm25 * 1.7);
-  const pollutants = {
-    pm25: pm25,
-    pm10: pm10,
-    o3: pollution?.o3 || 30,
-    no2: pollution?.no2 || 25,
-    so2: pollution?.so2 || 10,
-    co: pollution?.co || 400
-  };
-  const aqi = calculateOverallAQI(pollutants);
-  const aqiInfo = getAQICategory(aqi);
-  const risk = getRiskLevel(pm25, aqi);
-  const respiratoryRisk = getRespiratoryRiskDetails(risk);
-  
-  return {
-    city: name,
-    lat: coords.lat,
-    lng: coords.lng,
-    pm25,
-    pm10,
-    aqi,
-    aqiCategory: aqiInfo.category,
-    risk,
-    color: getRiskColor(risk),
-    respiratoryRisk,
-    pollutants,
-    timestamp: new Date().toISOString(),
-    source: 'static'
-  };
 }
 
 /**
@@ -161,7 +129,9 @@ router.get("/", async (req, res) => {
     const points = [];
     for (const [name, coords] of cities) {
       const pointData = await generatePointData(name, coords);
-      points.push(pointData);
+      if (pointData) { // Only add points with real data
+        points.push(pointData);
+      }
     }
 
     const payload = {
