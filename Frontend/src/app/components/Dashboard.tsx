@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Loader2, RefreshCw, Activity, Calendar, Wind, MapPin, Heart, Eye, Brain } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, Activity, Calendar, Wind, MapPin, Heart, Eye, Brain, Download, FileText, Table, FileJson } from "lucide-react";
 import { SummaryCards } from "./SummaryCards";
 import { DiseaseCards } from "./DiseaseCards";
 import { ChartsBlock } from "./ChartsBlock";
@@ -151,6 +151,33 @@ export function Dashboard({ state, city, area, onBack }: DashboardProps) {
     fetchData();
   };
 
+  const handleDownload = async (type: 'city' | 'heatmap', format: 'csv' | 'json' | 'pdf') => {
+    try {
+      let url = `${API_BASE}/export/${type}?format=${format}`;
+      
+      if (type === 'city') {
+        url += `&city=${encodeURIComponent(city)}&state=${encodeURIComponent(state)}`;
+        if (area) {
+          url += `&area=${encodeURIComponent(area)}`;
+        }
+      }
+      
+      // Create a temporary link to trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Show success feedback
+      console.log(`Downloading ${type} data in ${format} format`);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Download failed. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#EBF4F6] flex items-center justify-center">
@@ -229,6 +256,72 @@ export function Dashboard({ state, city, area, onBack }: DashboardProps) {
             </div>
             
             <div className="flex items-center gap-2">
+              {/* Download Menu */}
+              <div className="relative group">
+                <button
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all bg-[#088395] text-white hover:bg-[#09637E] shadow-md hover:shadow-lg"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </button>
+                
+                {/* Dropdown Menu */}
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-[#7AB2B2]/30 overflow-hidden z-30 opacity-0 group-hover:opacity-100 group-hover:translate-y-0 translate-y-2 transition-all duration-200 pointer-events-none group-hover:pointer-events-auto">
+                  <div className="p-2">
+                    <h3 className="text-sm font-semibold text-[#09637E] px-2 py-1">Export Options</h3>
+                    <div className="h-px bg-[#7AB2B2]/30 my-2"></div>
+                    
+                    {/* City Data Downloads */}
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => handleDownload('city', 'csv')}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-[#088395]/10 rounded-lg transition-colors"
+                      >
+                        <Table className="h-4 w-4 text-[#088395]" />
+                        City Data (CSV)
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDownload('city', 'json')}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-[#088395]/10 rounded-lg transition-colors"
+                      >
+                        <FileJson className="h-4 w-4 text-[#088395]" />
+                        City Data (JSON)
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDownload('city', 'pdf')}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-[#088395]/10 rounded-lg transition-colors"
+                      >
+                        <FileText className="h-4 w-4 text-[#088395]" />
+                        Health Report (PDF)
+                      </button>
+                    </div>
+                    
+                    <div className="h-px bg-[#7AB2B2]/30 my-2"></div>
+                    
+                    {/* Heatmap Data Downloads */}
+                    <div className="space-y-1">
+                      <button
+                        onClick={() => handleDownload('heatmap', 'csv')}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-[#088395]/10 rounded-lg transition-colors"
+                      >
+                        <Table className="h-4 w-4 text-[#088395]" />
+                        All Cities Data (CSV)
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDownload('heatmap', 'json')}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 hover:bg-[#088395]/10 rounded-lg transition-colors"
+                      >
+                        <FileJson className="h-4 w-4 text-[#088395]" />
+                        All Cities Data (JSON)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
