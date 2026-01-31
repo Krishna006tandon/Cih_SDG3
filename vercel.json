@@ -19,6 +19,14 @@
       "dest": "/api/gemini/chat"
     },
     {
+      "src": "/api/export/city",
+      "dest": "/api/export/city"
+    },
+    {
+      "src": "/api/export/heatmap",
+      "dest": "/api/export/heatmap"
+    },
+    {
       "src": "/(.*)",
       "dest": "/Frontend/dist/index.html"
     }
