@@ -1,31 +1,49 @@
 // Vercel API route for heatmap data export
-import { Parser } from "json2csv";
 import { cityCoordinates } from '../data/cityCoordinates.js';
 import { cityPollutionData } from '../data/cityPollutionData.js';
-import {
-  getRiskLevel,
-  calculateOverallAQI,
-  getAQICategory,
-  getRiskFromAQI,
-} from '../utils/healthRisk.js';
+
+// Simple AQI calculation function
+function calculateOverallAQI(pollutants) {
+  const pm25Aqi = Math.round((pollutants.pm25 / 100) * 100);
+  const pm10Aqi = Math.round((pollutants.pm10 / 150) * 100);
+  return Math.max(pm25Aqi, pm10Aqi, 20);
+}
+
+// Simple AQI category function
+function getAQICategory(aqi) {
+  if (aqi <= 50) return { category: "Good", color: "#22c55e" };
+  if (aqi <= 100) return { category: "Satisfactory", color: "#84cc16" };
+  if (aqi <= 200) return { category: "Moderate", color: "#eab308" };
+  if (aqi <= 300) return { category: "Poor", color: "#f97316" };
+  if (aqi <= 400) return { category: "Very Poor", color: "#ef4444" };
+  return { category: "Severe", color: "#7e22ce" };
+}
+
+// Simple risk function
+function getRiskFromAQI(aqi) {
+  if (aqi <= 100) return "Low";
+  if (aqi <= 200) return "Medium";
+  return "High";
+}
 
 // Helper function to generate CSV data for heatmap
 function generateHeatmapCSVData(data) {
-  const json2csvParser = new Parser();
+  const headers = ['city', 'latitude', 'longitude', 'pm25', 'pm10', 'aqi', 'risk', 'color', 'timestamp'];
   
-  const csvData = data.points.map(point => ({
-    city: point.city,
-    latitude: point.lat,
-    longitude: point.lng,
-    pm25: point.pm25,
-    pm10: point.pm10 || "N/A",
-    aqi: point.aqi || "N/A",
-    risk: point.risk,
-    color: point.color,
-    timestamp: point.timestamp || new Date().toISOString()
-  }));
+  const rows = data.points.map(point => [
+    point.city,
+    point.lat,
+    point.lng,
+    point.pm25,
+    point.pm10 || "N/A",
+    point.aqi || "N/A",
+    point.risk,
+    point.color,
+    point.timestamp || new Date().toISOString()
+  ]);
   
-  return json2csvParser.parse(csvData);
+  return headers.join(',') + '\n' + 
+         rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
 }
 
 // Generate sample heatmap data
