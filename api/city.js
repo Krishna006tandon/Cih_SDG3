@@ -342,9 +342,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // Ensure minimum values for PM
-    if (pollutants.pm25 == null) pollutants.pm25 = 45;
-    if (pollutants.pm10 == null) pollutants.pm10 = 78;
+    // Ensure all pollutants have values from fallback
+    if (pollutants.pm25 == null || pollutants.pm25 === 0) pollutants.pm25 = 45;
+    if (pollutants.pm10 == null || pollutants.pm10 === 0) pollutants.pm10 = 78;
+    if (pollutants.o3 == null || pollutants.o3 === 0) pollutants.o3 = 30;
+    if (pollutants.no2 == null || pollutants.no2 === 0) pollutants.no2 = 25;
+    if (pollutants.so2 == null || pollutants.so2 === 0) pollutants.so2 = 15;
+    if (pollutants.co == null || pollutants.co === 0) pollutants.co = 400;
 
     // Calculate AQI if not provided by AirVisual
     if (aqi === 0) {
@@ -360,6 +364,15 @@ export default async function handler(req, res) {
     const advisory = getAdvisory(risk);
     const chartData = generateChartData(pollutants.pm25, pollutants.pm10);
 
+    console.log(`Final pollutant values for ${normalizedCity}:`, {
+      pm25: pollutants.pm25,
+      pm10: pollutants.pm10,
+      o3: pollutants.o3,
+      no2: pollutants.no2,
+      so2: pollutants.so2,
+      co: pollutants.co
+    });
+    
     const payload = {
       city: normalizedCity,
       // All pollutants

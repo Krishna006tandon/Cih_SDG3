@@ -307,7 +307,7 @@ router.post("/", async (req, res) => {
     
     // Initialize response structure
     let responsePayload = {
-      state: state || getCityState(cityKey),
+      state: state || "Maharashtra",
       city: normalizedCity,
       area: area || null,
       coordinates: { lat: coordsToUse.lat, lng: coordsToUse.lng },
@@ -374,10 +374,12 @@ router.post("/", async (req, res) => {
                 so2: stationData.pollutants.so2?.concentration || 0,
                 co: stationData.pollutants.co?.concentration || 0,
               };
+              console.log(`Using actual concentrations from AirVisual API for area ${area}:`, JSON.stringify(pollutants, null, 2));
             } else {
               // Derive concentrations from AQI when actual concentrations are not available
-              console.log(`Deriving concentrations from AQI for area ${area}`);
+              console.log(`Deriving concentrations from AQI for area ${area}. AQI: ${stationData.aqi}, Main pollutant: ${stationData.mainPollutant}`);
               pollutants = deriveConcentrationsFromAQI(stationData.aqi, stationData.mainPollutant);
+              console.log(`Derived concentrations:`, JSON.stringify(pollutants, null, 2));
             }
             
             aqi = stationData.aqi;
@@ -443,10 +445,12 @@ router.post("/", async (req, res) => {
                 so2: airVisualData.pollutants.so2?.concentration || 0,
                 co: airVisualData.pollutants.co?.concentration || 0,
               };
+              console.log(`Using actual concentrations from AirVisual API for ${cityKey}:`, JSON.stringify(pollutants, null, 2));
             } else {
               // Derive concentrations from AQI when actual concentrations are not available
-              console.log(`Deriving concentrations from AQI for ${cityKey}`);
+              console.log(`Deriving concentrations from AQI for ${cityKey}. AQI: ${airVisualData.aqi}, Main pollutant: ${airVisualData.mainPollutant}`);
               pollutants = deriveConcentrationsFromAQI(airVisualData.aqi, airVisualData.mainPollutant);
+              console.log(`Derived concentrations:`, JSON.stringify(pollutants, null, 2));
             }
             
             aqi = airVisualData.aqi;
@@ -473,95 +477,100 @@ router.post("/", async (req, res) => {
         throw new Error('API key not configured');
       }
       
-      // Try AirVisual API first for real-time data
-      // Use appropriate state names for all supported cities
-      const stateMap = {
-        "Delhi": "Delhi",
-        "Gurgaon": "Haryana",
-        "Noida": "Uttar Pradesh",
-        "Ghaziabad": "Uttar Pradesh",
-        "Mumbai": "Maharashtra",
-        "Pune": "Maharashtra",
-        "Nagpur": "Maharashtra",
-        "Thane": "Maharashtra",
-        "Nashik": "Maharashtra",
-        "Aurangabad": "Maharashtra",
-        "Kolkata": "West Bengal",
-        "Howrah": "West Bengal",
-        "Chennai": "Tamil Nadu",
-        "Coimbatore": "Tamil Nadu",
-        "Madurai": "Tamil Nadu",
-        "Tiruchirappalli": "Tamil Nadu",
-        "Bengaluru": "Karnataka",
-        "Mysore": "Karnataka",
-        "Hubli": "Karnataka",
-        "Mangalore": "Karnataka",
-        "Hyderabad": "Telangana",
-        "Secunderabad": "Telangana",
-        "Ahmedabad": "Gujarat",
-        "Surat": "Gujarat",
-        "Vadodara": "Gujarat",
-        "Rajkot": "Gujarat",
-        "Jaipur": "Rajasthan",
-        "Jodhpur": "Rajasthan",
-        "Kota": "Rajasthan",
-        "Lucknow": "Uttar Pradesh",
-        "Kanpur": "Uttar Pradesh",
-        "Agra": "Uttar Pradesh",
-        "Allahabad": "Uttar Pradesh",
-        "Bareilly": "Uttar Pradesh",
-        "Meerut": "Uttar Pradesh",
-        "Faridabad": "Haryana",
-        "Gurgaon": "Haryana",
-        "Indore": "Madhya Pradesh",
-        "Bhopal": "Madhya Pradesh",
-        "Jabalpur": "Madhya Pradesh",
-        "Gwalior": "Madhya Pradesh",
-        "Raipur": "Chhattisgarh",
-        "Dhanbad": "Jharkhand",
-        "Ranchi": "Jharkhand",
-        "Patna": "Bihar",
-        "Amritsar": "Punjab",
-        "Ludhiana": "Punjab",
-        "Chandigarh": "Chandigarh",
-        "Jammu": "Jammu and Kashmir",
-        "Srinagar": "Jammu and Kashmir",
-        "Shimla": "Himachal Pradesh",
-        "Dehradun": "Uttarakhand",
-        "Guwahati": "Assam",
-        "Kochi": "Kerala",
-        "Thiruvananthapuram": "Kerala",
-        "Bhubaneswar": "Odisha",
-        "Cuttack": "Odisha",
-        "Visakhapatnam": "Andhra Pradesh",
-        "Vijayawada": "Andhra Pradesh"
-      };
-      
-      const state = stateMap[cityKey] || "Maharashtra";
-      
-      const airVisualData = await airVisualClient.getCityData(cityKey, state);
-      
-      if (airVisualData) {
-        console.log(`✅ AirVisual data successfully retrieved for ${cityKey}, ${state}`);
-        console.log(`AirVisual data for ${cityKey}:`, JSON.stringify(airVisualData, null, 2));
-        pollutants = {
-          pm25: airVisualData.pollutants.pm25?.concentration || 0,
-          pm10: airVisualData.pollutants.pm10?.concentration || 0,
-          o3: airVisualData.pollutants.o3?.concentration || 0,
-          no2: airVisualData.pollutants.no2?.concentration || 0,
-          so2: airVisualData.pollutants.so2?.concentration || 0,
-          co: airVisualData.pollutants.co?.concentration || 0,
+      // Try AirVisual API for real-time data
+      try {
+        // Use appropriate state names for all supported cities
+        const stateMap = {
+          "Delhi": "Delhi",
+          "Gurgaon": "Haryana",
+          "Noida": "Uttar Pradesh",
+          "Ghaziabad": "Uttar Pradesh",
+          "Mumbai": "Maharashtra",
+          "Pune": "Maharashtra",
+          "Nagpur": "Maharashtra",
+          "Thane": "Maharashtra",
+          "Nashik": "Maharashtra",
+          "Aurangabad": "Maharashtra",
+          "Kolkata": "West Bengal",
+          "Howrah": "West Bengal",
+          "Chennai": "Tamil Nadu",
+          "Coimbatore": "Tamil Nadu",
+          "Madurai": "Tamil Nadu",
+          "Tiruchirappalli": "Tamil Nadu",
+          "Bengaluru": "Karnataka",
+          "Mysore": "Karnataka",
+          "Hubli": "Karnataka",
+          "Mangalore": "Karnataka",
+          "Hyderabad": "Telangana",
+          "Secunderabad": "Telangana",
+          "Ahmedabad": "Gujarat",
+          "Surat": "Gujarat",
+          "Vadodara": "Gujarat",
+          "Rajkot": "Gujarat",
+          "Jaipur": "Rajasthan",
+          "Jodhpur": "Rajasthan",
+          "Kota": "Rajasthan",
+          "Lucknow": "Uttar Pradesh",
+          "Kanpur": "Uttar Pradesh",
+          "Agra": "Uttar Pradesh",
+          "Allahabad": "Uttar Pradesh",
+          "Bareilly": "Uttar Pradesh",
+          "Meerut": "Uttar Pradesh",
+          "Faridabad": "Haryana",
+          "Gurgaon": "Haryana",
+          "Indore": "Madhya Pradesh",
+          "Bhopal": "Madhya Pradesh",
+          "Jabalpur": "Madhya Pradesh",
+          "Gwalior": "Madhya Pradesh",
+          "Raipur": "Chhattisgarh",
+          "Dhanbad": "Jharkhand",
+          "Ranchi": "Jharkhand",
+          "Patna": "Bihar",
+          "Amritsar": "Punjab",
+          "Ludhiana": "Punjab",
+          "Chandigarh": "Chandigarh",
+          "Jammu": "Jammu and Kashmir",
+          "Srinagar": "Jammu and Kashmir",
+          "Shimla": "Himachal Pradesh",
+          "Dehradun": "Uttarakhand",
+          "Guwahati": "Assam",
+          "Kochi": "Kerala",
+          "Thiruvananthapuram": "Kerala",
+          "Bhubaneswar": "Odisha",
+          "Cuttack": "Odisha",
+          "Visakhapatnam": "Andhra Pradesh",
+          "Vijayawada": "Andhra Pradesh"
         };
-        aqi = airVisualData.aqi;
-        mainPollutant = airVisualData.mainPollutant;
-        finalCoords = {
-          lat: airVisualData.coordinates[1],
-          lng: airVisualData.coordinates[0]
-        };
-        weather = airVisualData.weather;
-      } else {
-        console.log(`⚠️ No AirVisual data returned for ${cityKey}, ${state}`);
-        throw new Error('No data returned from AirVisual API');
+        
+        const state = stateMap[cityKey] || "Maharashtra";
+        
+        const airVisualData = await airVisualClient.getCityData(cityKey, state);
+        
+        if (airVisualData) {
+          console.log(`✅ AirVisual data successfully retrieved for ${cityKey}, ${state}`);
+          console.log(`AirVisual data for ${cityKey}:`, JSON.stringify(airVisualData, null, 2));
+          pollutants = {
+            pm25: airVisualData.pollutants.pm25?.concentration || 0,
+            pm10: airVisualData.pollutants.pm10?.concentration || 0,
+            o3: airVisualData.pollutants.o3?.concentration || 0,
+            no2: airVisualData.pollutants.no2?.concentration || 0,
+            so2: airVisualData.pollutants.so2?.concentration || 0,
+            co: airVisualData.pollutants.co?.concentration || 0,
+          };
+          aqi = airVisualData.aqi;
+          mainPollutant = airVisualData.mainPollutant;
+          finalCoords = {
+            lat: airVisualData.coordinates[1],
+            lng: airVisualData.coordinates[0]
+          };
+          weather = airVisualData.weather;
+          dataSource = "IQAir";
+          
+          console.log(`Successfully fetched AirVisual data for ${cityKey}`);
+        }
+      } catch (airVisualError) {
+        console.log(`AirVisual API failed for ${cityKey}, falling back to static data:`, airVisualError.message);
+        fallbackUsed = true;
       }
     } catch (error) {
       // Handle specific error cases
@@ -595,8 +604,9 @@ router.post("/", async (req, res) => {
       try {
         const openMeteoData = await fetchOpenMeteoData(coordsToUse.lat, coordsToUse.lng);
         if (openMeteoData) {
-          if (openMeteoData.pm25 != null) pollutants.pm25 = openMeteoData.pm25;
-          if (openMeteoData.pm10 != null) pollutants.pm10 = openMeteoData.pm10;
+          // Only update pollutants if they're not already set or are zero
+          if (pollutants.pm25 == null || pollutants.pm25 === 0) pollutants.pm25 = openMeteoData.pm25;
+          if (pollutants.pm10 == null || pollutants.pm10 === 0) pollutants.pm10 = openMeteoData.pm10;
           if (openMeteoData.coords) finalCoords = openMeteoData.coords;
           dataSource = "Open-Meteo";
           console.log(`Successfully fetched Open-Meteo fallback data for ${locationName}`);
@@ -608,29 +618,56 @@ router.post("/", async (req, res) => {
       // Try OpenAQ as secondary fallback (only if API key is configured)
       const openaqApiKey = process.env.OPENAQ_API_KEY;
       if (openaqApiKey && openaqApiKey !== 'your-openaq-api-key-here') {
-        const openaqData = await fetchOpenAQData(coords.lat, coords.lng);
+        const openaqData = await fetchOpenAQData(coordsToUse.lat, coordsToUse.lng);
         if (openaqData) {
-          if (openaqData.pm25 != null) pollutants.pm25 = openaqData.pm25;
-          if (openaqData.pm10 != null) pollutants.pm10 = openaqData.pm10;
-          if (openaqData.o3 != null) pollutants.o3 = openaqData.o3;
-          if (openaqData.no2 != null) pollutants.no2 = openaqData.no2;
-          if (openaqData.so2 != null) pollutants.so2 = openaqData.so2;
-          if (openaqData.co != null) pollutants.co = openaqData.co;
+          // Update pollutants with OpenAQ data if available
+          if (openaqData.pm25 != null && openaqData.pm25 > 0) pollutants.pm25 = openaqData.pm25;
+          if (openaqData.pm10 != null && openaqData.pm10 > 0) pollutants.pm10 = openaqData.pm10;
+          if (openaqData.o3 != null && openaqData.o3 > 0) pollutants.o3 = openaqData.o3;
+          if (openaqData.no2 != null && openaqData.no2 > 0) pollutants.no2 = openaqData.no2;
+          if (openaqData.so2 != null && openaqData.so2 > 0) pollutants.so2 = openaqData.so2;
+          if (openaqData.co != null && openaqData.co > 0) pollutants.co = openaqData.co;
           if (openaqData.coords) finalCoords = openaqData.coords;
+          console.log(`Applied OpenAQ data for ${locationName}:`, JSON.stringify(openaqData, null, 2));
         }
       } else if (error.message !== 'API key not configured') {
         console.log('⚠️ OpenAQ API key not configured, skipping secondary fallback');
       }
 
-    // Ensure minimum values for PM
-    if (pollutants.pm25 == null) pollutants.pm25 = 45;
-    if (pollutants.pm10 == null) pollutants.pm10 = 78;
+    // Ensure all pollutant values are populated with fallbacks
+    // First try static data, then defaults
+    const staticFallback = getStaticFallback(cityKey);
+    if (staticFallback) {
+      if (pollutants.pm25 == null || pollutants.pm25 === 0) pollutants.pm25 = staticFallback.pm25;
+      if (pollutants.pm10 == null || pollutants.pm10 === 0) pollutants.pm10 = staticFallback.pm10;
+      if (pollutants.o3 == null || pollutants.o3 === 0) pollutants.o3 = staticFallback.o3 || 30;
+      if (pollutants.no2 == null || pollutants.no2 === 0) pollutants.no2 = staticFallback.no2 || 25;
+      if (pollutants.so2 == null || pollutants.so2 === 0) pollutants.so2 = staticFallback.so2 || 15;
+      if (pollutants.co == null || pollutants.co === 0) pollutants.co = staticFallback.co || 400;
+    } else {
+      // Default fallback values based on typical Indian city pollution
+      if (pollutants.pm25 == null || pollutants.pm25 === 0) pollutants.pm25 = 45;
+      if (pollutants.pm10 == null || pollutants.pm10 === 0) pollutants.pm10 = 78;
+      if (pollutants.o3 == null || pollutants.o3 === 0) pollutants.o3 = 30;
+      if (pollutants.no2 == null || pollutants.no2 === 0) pollutants.no2 = 25;
+      if (pollutants.so2 == null || pollutants.so2 === 0) pollutants.so2 = 15;
+      if (pollutants.co == null || pollutants.co === 0) pollutants.co = 400;
+    }
 
     // Calculate AQI if not provided
     if (aqi === 0) {
       aqi = calculateOverallAQI(pollutants);
     }
 
+    console.log(`Building response for ${cityKey} with pollutants:`, JSON.stringify({
+      pm25: pollutants.pm25,
+      pm10: pollutants.pm10,
+      o3: pollutants.o3,
+      no2: pollutants.no2,
+      so2: pollutants.so2,
+      co: pollutants.co
+    }, null, 2));
+    
     // Calculate AQI info
     const aqiInfo = getAQICategory(aqi);
     const risk = getRiskFromAQI(aqi);
@@ -663,6 +700,17 @@ router.post("/", async (req, res) => {
       fallbackUsed: fallbackUsed
     };
 
+    console.log(`Sending response for ${cityKey}:`, JSON.stringify({
+      pm25: responsePayload.pm25,
+      pm10: responsePayload.pm10,
+      o3: responsePayload.o3,
+      no2: responsePayload.no2,
+      so2: responsePayload.so2,
+      co: responsePayload.co,
+      aqi: responsePayload.aqi,
+      source: responsePayload.source
+    }, null, 2));
+    
     req.cityCache?.set(cacheKey, responsePayload);
     res.json(responsePayload);
   }
