@@ -1,13 +1,26 @@
 // Vercel API route for heatmap data
 // This replicates the backend heatmap functionality
 
-import { cityCoordinates } from '../../data/cityCoordinates.js';
-import { cityPollutionData } from '../../data/cityPollutionData.js';
-import { getRiskLevel, calculateOverallAQI } from '../../utils/healthRisk.js';
+import { cityCoordinates } from '../data/cityCoordinates.js';
+import { cityPollutionData } from '../data/cityPollutionData.js';
 
 function getRiskColor(risk) {
   const colors = { High: "#ef4444", Medium: "#eab308", Low: "#22c55e" };
   return colors[risk] || colors.Low;
+}
+
+// Simple risk level function
+function getRiskLevel(pm25, aqi) {
+  if (aqi <= 100) return "Low";
+  if (aqi <= 200) return "Medium";
+  return "High";
+}
+
+// Simple AQI calculation
+function calculateOverallAQI(pollutants) {
+  const pm25Aqi = Math.round((pollutants.pm25 / 100) * 100);
+  const pm10Aqi = Math.round((pollutants.pm10 / 150) * 100);
+  return Math.max(pm25Aqi, pm10Aqi, 20);
 }
 
 export default async function handler(req, res) {
