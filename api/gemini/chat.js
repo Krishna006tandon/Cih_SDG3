@@ -60,17 +60,37 @@ export default async function handler(req, res) {
     const cityName = extractCityName(message);
     let cityData = null;
     
-    if (cityName) {
-      console.log(`Detected city in query: ${cityName}`);
-      cityData = await fetchCityData(cityName);
+    // If no city detected but query is about air quality/pollution, try common Indian cities
+    let fallbackCity = null;
+    if (!cityName && (message.toLowerCase().includes('air quality') || 
+                      message.toLowerCase().includes('pollution') || 
+                      message.toLowerCase().includes('aqi') ||
+                      message.toLowerCase().includes('pm2.5') ||
+                      message.toLowerCase().includes('health'))) {
+      fallbackCity = 'Delhi'; // Default to Delhi for general air quality queries
+    }
+    
+    if (cityName || fallbackCity) {
+      const targetCity = cityName || fallbackCity;
+      console.log(`Fetching data for city: ${targetCity}`);
+      cityData = await fetchCityData(targetCity);
     }
 
     // Prepare the prompt for Gemini
     // Include project context to help the AI understand our air pollution and health data
     let contextPrompt = `You are an AI assistant for the Air Pollution & Health Dashboard project. 
-    This project provides air quality data, health risk assessments, and recommendations for cities in India.
+    This project provides real-time air quality data, health risk assessments, and recommendations for cities in India.
     Data includes AQI (Air Quality Index), pollutant levels (PM2.5, PM10, O3, NO2, SO2, CO), 
-    health risks, disease correlations, and health recommendations.`;
+    health risks, disease correlations, and health recommendations.
+    
+    IMPORTANT: When users ask about air quality, pollution levels, or health conditions, 
+    ALWAYS include the specific numerical data (AQI values, pollutant concentrations) in your response.
+    Format your answers with clear data points like:
+    - "The current AQI in [city] is [value] ([category])"
+    - "PM2.5 levels are at [value] μg/m³"
+    - "Health risk is classified as [risk level]"
+    
+    Use the provided city data to give specific, data-driven answers rather than general information.`;
     
     // Add city-specific data if available
     if (cityData && cityData.city) {
@@ -96,10 +116,23 @@ export default async function handler(req, res) {
       }
     }
     
-    contextPrompt += `\n\nRespond to the user's query based on this context. If the query is about air pollution, health data, 
-    or the dashboard functionality, provide helpful information. If it's unrelated, politely redirect to 
-    topics relevant to air quality and health.`;
-
+    contextPrompt += `\n\nRespond to the user's query based on this context. CRITICAL INSTRUCTIONS:
+    1. ALWAYS include specific numerical data (AQI values, pollutant levels) when discussing air quality
+    2. Use the exact values from the provided city data
+    3. Format responses clearly with data points
+    4. If the query is about air pollution, health data, or the dashboard functionality, provide helpful information
+    5. If it's unrelated, politely redirect to topics relevant to air quality and health
+    6. Be concise but data-rich in your responses`;
+    
+    // If we have city data, make it even more prominent in the context
+    if (cityData && cityData.city) {
+      contextPrompt += `\n\nIMPORTANT: You have access to current air quality data for ${cityData.city}. 
+    Use these exact values in your response:
+    - AQI: ${cityData.aqi} (${cityData.aqiCategory})
+    - Health Risk: ${cityData.healthRisk}
+    Include these numbers prominently in your answer.`;
+    }
+    
     // Format the conversation history for the API
     const formattedHistory = history.slice(-6); // Use last 3 exchanges (user-assistant pairs)
     
