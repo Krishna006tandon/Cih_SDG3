@@ -1,5 +1,35 @@
 import axios from 'axios';
 
+// Simple in-memory cache for rate limiting
+const requestCache = new Map();
+const RATE_LIMIT_WINDOW = 60000; // 1 minute window
+const MAX_REQUESTS_PER_MINUTE = 50; // Max requests per minute per IP
+
+// Function to check if request should be rate limited
+function isRateLimited(clientIp) {
+  const now = Date.now();
+  const clientRequests = requestCache.get(clientIp) || [];
+  
+  // Remove requests older than the rate limit window
+  const recentRequests = clientRequests.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+  
+  // Check if client has exceeded the rate limit
+  if (recentRequests.length >= MAX_REQUESTS_PER_MINUTE) {
+    return true;
+  }
+  
+  // Add current request to the cache
+  recentRequests.push(now);
+  requestCache.set(clientIp, recentRequests);
+  
+  return false;
+}
+
+// Function to get client IP address
+function getClientIp(req) {
+  return req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.socket.remoteAddress || (req.connection.socket ? req.connection.socket.remoteAddress : null);
+}
+
 // Helper function to extract city name from user query
 function extractCityName(query) {
   // Simple pattern to identify city names - could be enhanced with NLP
@@ -16,7 +46,11 @@ function extractCityName(query) {
       let cityName = match[1].trim();
       // Remove common words that might be incorrectly captured
       cityName = cityName.replace(/(air|pollution|quality|aqi|health|data|information|levels?|risks?|report)/gi, '').trim();
-      if (cityName.length > 1) {
+      
+      // Validate that the extracted name is actually a supported city
+      const supportedCities = 'Delhi,Mumbai,Bangalore,Hyderabad,Ahmedabad,Chennai,Kolkata,Surat,Pune,Jaipur,Lucknow,Kanpur,Nagpur,Visakhapatnam,Indore,Thane,Bhopal,Patna,Vadodara,Ghaziabad,Ludhiana,Agra,Nashik,Faridabad,Meerut,Rajkot,Kalyan-Dombivali,Vasai-Virar,Varanasi,Srinagar,Aurangabad,Dhanbad,Amritsar,Navi Mumbai,Allahabad,Howrah,Ranchi,Jabalpur,Coimbatore,Gwalior,Vijayawada,Jodhpur,Madurai,Rajpur Sonarpur,Hubballi-Dharwad,Chandigarh,Solapur,Bareilly,Guwahati,Shivamogga,Trivandrum,Salem,Kota,Mysore,Raipur,Bhubaneswar,Moradabad,Kochi,Gurgaon,Aligarh,Jalandhar,Tiruchirappalli,Tiruppur,Bhayandar,Ulhasnagar,Bhiwandi,Saharanpur,Warangal,Guntur,Kurnool,Ambattur,Davanagere,Bikaner,Rajahmundry,Mangalore,Jamshedpur,Udupi,Noida,Dehradun,Belgaum,Malegaon,Gaya,Jalgaon,Kakinada,Durg-Bhilai Nagar,Parbhani,Nizamabad,Thrissur,Ajmer,Bokaro,Alwar,Bilaspur,Shillong,Kottayam,Kolhapur,Siliguri,Bhatpara'.split(',');
+      
+      if (cityName.length > 1 && supportedCities.includes(cityName)) {
         return cityName;
       }
     }
@@ -50,8 +84,18 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Get client IP for rate limiting
+    const clientIp = getClientIp(req);
+      
+    // Check rate limit
+    if (isRateLimited(clientIp)) {
+      return res.status(429).json({ 
+        error: 'Rate limit exceeded. Please try again later.' 
+      });
+    }
+      
     const { message, history } = req.body;
-
+  
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
