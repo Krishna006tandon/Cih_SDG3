@@ -46,62 +46,96 @@ function generateHeatmapCSVData(data) {
          rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
 }
 
-// Generate sample heatmap data
-function generateHeatmapData(state) {
-  let cities = Object.entries(cityCoordinates);
-  
-  // Filter by state if provided
-  if (state) {
-    // Simple state filtering - you'd want a more comprehensive mapping
-    const stateCities = {
-      "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik"],
-      "Delhi": ["Delhi", "Gurgaon", "Noida", "Ghaziabad"],
-      "Karnataka": ["Bengaluru", "Mysore"],
-      "Tamil Nadu": ["Chennai", "Coimbatore"],
-      "West Bengal": ["Kolkata"],
-      "Telangana": ["Hyderabad"],
-      "Gujarat": ["Ahmedabad", "Surat"],
-      "Rajasthan": ["Jaipur", "Jodhpur"],
-      "Punjab": ["Amritsar"],
-      "Uttar Pradesh": ["Lucknow", "Kanpur"]
-    };
+// Fetch real heatmap data from main API
+async function fetchHeatmapData(state) {
+  try {
+    // Call the main heatmap API endpoint to get real data
+    const url = state 
+      ? `https://cih-sdg-3.vercel.app/api/heatmap?state=${encodeURIComponent(state)}`
+      : 'https://cih-sdg-3.vercel.app/api/heatmap';
+      
+    const response = await fetch(url);
     
-    const stateCityList = stateCities[state] || [];
-    cities = cities.filter(([name]) => 
-      stateCityList.some(c => c.toLowerCase() === name.toLowerCase())
-    );
+    if (!response.ok) {
+      throw new Error(`Heatmap API request failed with status ${response.status}`);
+    }
+    
+    const apiData = await response.json();
+    
+    // Transform the API data to match our export format
+    const points = apiData.data?.points || apiData.points || [];
+    
+    const transformedPoints = points.map(point => ({
+      city: point.city,
+      lat: point.lat,
+      lng: point.lng,
+      pm25: point.pm25,
+      pm10: point.pm10 || "N/A",
+      aqi: point.aqi || "N/A",
+      risk: point.risk,
+      color: point.color,
+      timestamp: point.timestamp || new Date().toISOString()
+    }));
+    
+    return { points: transformedPoints };
+    
+  } catch (error) {
+    console.error("Failed to fetch real heatmap data, using fallback:", error.message);
+    
+    // Fallback to static data if API call fails
+    let cities = Object.entries(cityCoordinates);
+    
+    // Filter by state if provided
+    if (state) {
+      const stateCities = {
+        "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane", "Nashik"],
+        "Delhi": ["Delhi", "Gurgaon", "Noida", "Ghaziabad"],
+        "Karnataka": ["Bengaluru", "Mysore"],
+        "Tamil Nadu": ["Chennai", "Coimbatore"],
+        "West Bengal": ["Kolkata"],
+        "Telangana": ["Hyderabad"],
+        "Gujarat": ["Ahmedabad", "Surat"],
+        "Rajasthan": ["Jaipur", "Jodhpur"],
+        "Punjab": ["Amritsar"],
+        "Uttar Pradesh": ["Lucknow", "Kanpur"]
+      };
+      
+      const stateCityList = stateCities[state] || [];
+      cities = cities.filter(([name]) => 
+        stateCityList.some(c => c.toLowerCase() === name.toLowerCase())
+      );
+    }
+    
+    const points = cities.map(([name, coords]) => {
+      const pollution = cityPollutionData[name] || {
+        pm25: 45 + Math.random() * 100,
+        pm10: 78 + Math.random() * 120,
+        o3: 20 + Math.random() * 40,
+        no2: 20 + Math.random() * 30,
+        so2: 10 + Math.random() * 20,
+        co: 300 + Math.random() * 600
+      };
+      
+      const aqi = calculateOverallAQI(pollution);
+      const aqiInfo = getAQICategory(aqi);
+      const risk = getRiskFromAQI(aqi);
+      
+      return {
+        city: name,
+        lat: coords.lat,
+        lng: coords.lng,
+        pm25: Math.round(pollution.pm25),
+        pm10: Math.round(pollution.pm10),
+        aqi: aqi,
+        aqiCategory: aqiInfo.category,
+        risk: risk,
+        color: risk === "High" ? "#ef4444" : risk === "Medium" ? "#eab308" : "#22c55e",
+        timestamp: new Date().toISOString()
+      };
+    });
+    
+    return { points };
   }
-  
-  const points = cities.map(([name, coords]) => {
-    // Generate sample data for each city
-    const pollution = cityPollutionData[name] || {
-      pm25: 45 + Math.random() * 100,
-      pm10: 78 + Math.random() * 120,
-      o3: 20 + Math.random() * 40,
-      no2: 20 + Math.random() * 30,
-      so2: 10 + Math.random() * 20,
-      co: 300 + Math.random() * 600
-    };
-    
-    const aqi = calculateOverallAQI(pollution);
-    const aqiInfo = getAQICategory(aqi);
-    const risk = getRiskFromAQI(aqi);
-    
-    return {
-      city: name,
-      lat: coords.lat,
-      lng: coords.lng,
-      pm25: Math.round(pollution.pm25),
-      pm10: Math.round(pollution.pm10),
-      aqi: aqi,
-      aqiCategory: aqiInfo.category,
-      risk: risk,
-      color: risk === "High" ? "#ef4444" : risk === "Medium" ? "#eab308" : "#22c55e",
-      timestamp: new Date().toISOString()
-    };
-  });
-  
-  return { points };
 }
 
 export default async function handler(req, res) {
@@ -112,8 +146,8 @@ export default async function handler(req, res) {
   try {
     const { state, format = "csv" } = req.query;
     
-    // Generate heatmap data
-    const data = generateHeatmapData(state);
+    // Fetch heatmap data
+    const data = await fetchHeatmapData(state);
     
     if (format === "json") {
       res.setHeader('Content-Type', 'application/json');

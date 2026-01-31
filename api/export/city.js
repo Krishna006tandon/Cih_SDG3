@@ -112,58 +112,108 @@ function getAdvisory(risk) {
   return "Air quality is acceptable for most activities.";
 }
 
-// Helper function to fetch city data
+// Helper function to fetch city data from main API
 async function fetchCityData(city, state, area) {
-  const cityKey = city;
-  const coords = cityCoordinates[cityKey];
-  
-  if (!coords) {
-    throw new Error("City not supported");
+  try {
+    // Call the main city API endpoint to get real data
+    const requestBody = { state, city };
+    if (area) requestBody.area = area;
+    
+    const response = await fetch('https://cih-sdg-3.vercel.app/api/city', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    // Return the real data with proper export formatting
+    return {
+      state: data.state,
+      city: data.city,
+      area: data.area || null,
+      coordinates: data.coordinates,
+      pm25: data.pm25,
+      pm10: data.pm10,
+      o3: data.o3,
+      no2: data.no2,
+      so2: data.so2,
+      co: data.co,
+      aqi: data.aqi,
+      aqiCategory: data.aqiCategory,
+      aqiColor: data.aqiColor,
+      risk: data.risk,
+      diseases: data.diseases,
+      detailedDiseases: data.detailedDiseases || [],
+      healthRecommendations: data.healthRecommendations || {},
+      chartData: data.chartData || [],
+      advisory: data.advisory,
+      disclaimer: data.disclaimer || "For awareness and prevention only. Not medical diagnosis.",
+      lastUpdated: data.lastUpdated || new Date().toISOString(),
+      source: data.source || "api-data",
+      fallbackUsed: data.fallbackUsed || false,
+      locationType: data.locationType || (area ? "area" : "city"),
+      locationAttempted: data.locationAttempted || area || city
+    };
+    
+  } catch (error) {
+    console.error("Failed to fetch real data, using fallback:", error.message);
+    
+    // Fallback to static data if API call fails
+    const cityKey = city;
+    const coords = cityCoordinates[cityKey];
+    
+    if (!coords) {
+      throw new Error("City not supported");
+    }
+    
+    const pollution = cityPollutionData[cityKey] || {
+      pm25: 45 + Math.random() * 80,
+      pm10: 78 + Math.random() * 100,
+      o3: 20 + Math.random() * 30,
+      no2: 20 + Math.random() * 25,
+      so2: 10 + Math.random() * 15,
+      co: 300 + Math.random() * 500
+    };
+    
+    const aqi = calculateOverallAQI(pollution);
+    const aqiInfo = getAQICategory(aqi);
+    const risk = getRiskFromAQI(aqi);
+    const diseases = getDiseasesByRisk(risk);
+    const advisory = getAdvisory(risk);
+    
+    return {
+      state: state || "Rajasthan",
+      city: cityKey,
+      area: area || null,
+      coordinates: { lat: coords.lat, lng: coords.lng },
+      pm25: Math.round(pollution.pm25 * 10) / 10,
+      pm10: Math.round(pollution.pm10 * 10) / 10,
+      o3: Math.round(pollution.o3 * 10) / 10,
+      no2: Math.round(pollution.no2 * 10) / 10,
+      so2: Math.round(pollution.so2 * 10) / 10,
+      co: Math.round(pollution.co * 10) / 10,
+      aqi,
+      aqiCategory: aqiInfo.category,
+      aqiColor: aqiInfo.color,
+      risk,
+      diseases,
+      detailedDiseases: [],
+      healthRecommendations: {},
+      chartData: [],
+      advisory,
+      disclaimer: "For awareness and prevention only. Not medical diagnosis.",
+      lastUpdated: new Date().toISOString(),
+      source: "static-data-fallback",
+      fallbackUsed: true,
+      locationType: area ? "area" : "city",
+      locationAttempted: area || cityKey
+    };
   }
-  
-  // Simple fallback data
-  const pollution = cityPollutionData[cityKey] || {
-    pm25: 45 + Math.random() * 80,
-    pm10: 78 + Math.random() * 100,
-    o3: 20 + Math.random() * 30,
-    no2: 20 + Math.random() * 25,
-    so2: 10 + Math.random() * 15,
-    co: 300 + Math.random() * 500
-  };
-  
-  const aqi = calculateOverallAQI(pollution);
-  const aqiInfo = getAQICategory(aqi);
-  const risk = getRiskFromAQI(aqi);
-  const diseases = getDiseasesByRisk(risk);
-  const advisory = getAdvisory(risk);
-  
-  return {
-    state: state || "Rajasthan",
-    city: cityKey,
-    area: area || null,
-    coordinates: { lat: coords.lat, lng: coords.lng },
-    pm25: Math.round(pollution.pm25 * 10) / 10,
-    pm10: Math.round(pollution.pm10 * 10) / 10,
-    o3: Math.round(pollution.o3 * 10) / 10,
-    no2: Math.round(pollution.no2 * 10) / 10,
-    so2: Math.round(pollution.so2 * 10) / 10,
-    co: Math.round(pollution.co * 10) / 10,
-    aqi,
-    aqiCategory: aqiInfo.category,
-    aqiColor: aqiInfo.color,
-    risk,
-    diseases,
-    detailedDiseases: [],
-    healthRecommendations: {},
-    chartData: [],
-    advisory,
-    disclaimer: "For awareness and prevention only. Not medical diagnosis.",
-    lastUpdated: new Date().toISOString(),
-    source: "static-data",
-    fallbackUsed: true,
-    locationType: area ? "area" : "city",
-    locationAttempted: area || cityKey
-  };
 }
 
 export default async function handler(req, res) {
